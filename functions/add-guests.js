@@ -1,39 +1,30 @@
-const faunadb = require('faunadb');
-const q = faunadb.query;
+const fs = require('fs');
+const path = require('path');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const client = new faunadb.Client({
-    secret: process.env.FAUNADB_SECRET_KEY,
-    domain: 'db.fauna.com',
-    scheme: 'https',
-  });
-
   try {
-    const { name } = JSON.parse(event.body);
-    if (!name) {
-      return { statusCode: 400, body: 'Nama tamu diperlukan.' };
+    const dataPath = path.join(__dirname, '../database.json');
+    const { name, email } = JSON.parse(event.body);
+
+    if (!name || !email) {
+      return { statusCode: 400, body: JSON.stringify({ success: false, message: 'Nama dan email wajib diisi.' }) };
     }
 
-    const result = await client.query(
-      q.Create(q.Collection('guests'), {
-        data: {
-          name: name,
-          isCheckedIn: false,
-          checkInTimestamp: null,
-          createdAt: q.Now(),
-        },
-      })
-    );
+    const raw = fs.readFileSync(dataPath);
+    const database = JSON.parse(raw);
+
+    database.guests.push({ name, email, checkedIn: false });
+    fs.writeFileSync(dataPath, JSON.stringify(database, null, 2));
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ guest: result }),
+      body: JSON.stringify({ success: true, message: 'Tamu berhasil ditambahkan.' }),
     };
-  } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+  } catch (err) {
+    return { statusCode: 500, body: JSON.stringify({ success: false, message: 'Server error' }) };
   }
 };
