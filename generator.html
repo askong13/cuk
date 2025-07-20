@@ -1,70 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generator QR Code Tamu</title>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <style>
-        body { font-family: sans-serif; max-width: 500px; margin: auto; padding: 20px; }
-        select { width: 100%; padding: 8px; margin-bottom: 10px; }
-        button { width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; cursor: pointer; }
-        #qrcode { width: 256px; height: 256px; margin: 20px auto; border: 1px solid #ccc; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Generator</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
-<body>
-    <h1>Generator QR Code</h1>
-    <p>Pilih nama tamu untuk menampilkan QR code undangan.</p>
-    <form id="guest-form">
-        <select id="guest-select" required>
-            <option value="">-- Pilih Tamu --</option>
-        </select>
-        <button type="submit">Tampilkan QR Code</button>
-    </form>
-    <div id="qrcode"></div>
+<body class="bg-gray-100 text-gray-900 flex flex-col min-h-screen">
 
-    <script>
-        const guestSelect = document.getElementById('guest-select');
-        const form = document.getElementById('guest-form');
-        const qrcodeDiv = document.getElementById('qrcode');
-        let qrcode = null;
+  <header class="bg-white shadow p-4 text-center font-bold text-xl">
+    Generator QR Code Tamu
+  </header>
 
-        // 1. Muat daftar tamu dari database.json
-        async function loadGuests() {
-            try {
-                const response = await fetch('/database.json');
-                const guests = await response.json();
-                guests.forEach(guest => {
-                    const option = document.createElement('option');
-                    option.value = guest.id;
-                    option.textContent = `${guest.id}: ${guest.name}`;
-                    guestSelect.appendChild(option);
-                });
-            } catch (error) {
-                console.error("Gagal memuat database tamu:", error);
-                alert("Gagal memuat database tamu. Pastikan file database.json ada.");
-            }
-        }
-        
-        // 2. Event listener untuk menampilkan QR Code
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const selectedGuestId = guestSelect.value;
-            if (!selectedGuestId) {
-                alert('Silakan pilih tamu terlebih dahulu.');
-                return;
-            }
-            
-            qrcodeDiv.innerHTML = ''; // Kosongkan QR code sebelumnya
-            qrcode = new QRCode(qrcodeDiv, {
-                text: selectedGuestId, // Isi QR code adalah ID tamu
-                width: 256,
-                height: 256,
-            });
+  <main class="flex-grow p-6 flex flex-col items-center">
+    <input type="text" id="input-text" placeholder="Masukkan kode atau nama..." class="w-full max-w-md p-2 border rounded mb-4" />
+    <button onclick="generateQR()" class="bg-blue-600 text-white px-4 py-2 rounded shadow">Generate QR</button>
+    <div id="qrcode" class="mt-6"></div>
+  </main>
+
+  <footer class="bg-white p-4 text-center text-sm text-gray-500">
+    Partner with <a href="https://example.com" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
+  </footer>
+
+  <script>
+    function generateQR() {
+      const text = document.getElementById('input-text').value;
+      const qrDiv = document.getElementById('qrcode');
+      qrDiv.innerHTML = '';
+      if (text) {
+        QRCode.toCanvas(document.createElement('canvas'), text, function (error, canvas) {
+          if (!error) {
+            qrDiv.appendChild(canvas);
+          } else {
+            qrDiv.innerHTML = 'Gagal generate QR';
+          }
         });
-
-        // Panggil fungsi saat halaman dimuat
-        document.addEventListener('DOMContentLoaded', loadGuests);
-    </script>
+      } else {
+        qrDiv.innerHTML = 'Masukkan teks untuk generate QR';
+      }
+    }
+  </script>
 </body>
 </html>
