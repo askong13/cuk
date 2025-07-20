@@ -1,70 +1,104 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contoh Thumbnail dan Download</title>
-    <style>
-        /* CSS sederhana untuk tata letak yang lebih baik */
-        body {
-            font-family: sans-serif;
-            background-color: #f4f4f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background-color: #ffffff;
-            padding: 20px 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        .thumbnail {
-            max-width: 200px; /* Batasi lebar thumbnail */
-            height: auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 15px;
-        }
-        .download-links a {
-            display: inline-block;
-            margin: 5px;
-            padding: 10px 15px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-        .download-links a:hover {
-            background-color: #0056b3;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QR Code Semua Tamu dengan Bingkai</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
-<body>
+<body class="bg-gray-100 text-gray-900 p-6">
 
-    <div class="container">
-        <h1>Galeri Gambar</h1>
-        <p>Klik link di bawah gambar untuk mengunduh.</p>
+  <h1 class="text-2xl font-bold mb-6 text-center">QR Code Semua Tamu</h1>
 
-        <div class="image-item">
-            <img src="path/ke/thumbnail-gambar.jpg" alt="Pemandangan Indah" class="thumbnail">
+  <div id="qr-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+  </div>
 
-            <div class="download-links">
-                <a href="path/ke/full-resolusi-gambar.png" download="Pemandangan-Resolusi-Tinggi.png">
-                    Download PNG 🖼️
-                </a>
+  <footer class="mt-10 text-center text-sm text-gray-500">
+    Partner with <a href="https://siskahandiska.com/" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
+  </footer>
 
-                <a href="path/ke/dokumen-gambar.pdf" download="Pemandangan-Versi-PDF.pdf">
-                    Download PDF 📄
-                </a>
-            </div>
-        </div>
+  <script>
+    const container = document.getElementById("qr-container");
+    const frameImage = new Image();
+    frameImage.src = 'https://lh3.googleusercontent.com/d/10MmfOzJAAHvPfnUoRcdVmr6xN_V1L0RL=w1920-h1080';
+    frameImage.crossOrigin = "Anonymous";
 
-    </div>
+    frameImage.onload = function() {
+      // --- PENGATURAN TATA LETAK ---
+      // Sesuaikan nilai ini untuk mengubah jarak QR code dari tepi bingkai.
+      const framePadding = 85; 
+      // -----------------------------
 
+      fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
+        .then(res => res.json())
+        .then(data => {
+          Object.entries(data || {}).forEach(([id, guest]) => {
+            const div = document.createElement("div");
+            div.className = "bg-white p-4 rounded shadow text-center flex flex-col items-center";
+
+            const finalCanvas = document.createElement("canvas");
+            finalCanvas.width = frameImage.width;
+            finalCanvas.height = frameImage.height;
+            const ctx = finalCanvas.getContext("2d");
+
+            // Menghitung ukuran QR agar pas, dikurangi padding dari kedua sisi.
+            const availableWidth = frameImage.width - (framePadding * 2);
+            const availableHeight = frameImage.height - (framePadding * 2);
+            // Gunakan ukuran terkecil agar QR tetap berbentuk persegi dan pas
+            const qrSize = Math.min(availableWidth, availableHeight);
+
+            const qrCanvas = document.createElement("canvas");
+            const qrOptions = {
+              width: qrSize,
+              errorCorrectionLevel: 'H',
+              margin: 1
+            };
+            
+            QRCode.toCanvas(qrCanvas, guest.name, qrOptions, function (error) {
+              if (error) {
+                console.error(error);
+                return;
+              }
+
+              // Hitung posisi X dan Y agar QR code berada di tengah bingkai
+              const qrX = (frameImage.width - qrSize) / 2;
+              const qrY = (frameImage.height - qrSize) / 2;
+
+              // Gambar QR code di posisi tengah
+              ctx.drawImage(qrCanvas, qrX, qrY);
+
+              // Gambar bingkai di lapisan paling atas
+              ctx.drawImage(frameImage, 0, 0, finalCanvas.width, finalCanvas.height);
+              
+              // Tampilkan kanvas yang sudah jadi
+              div.appendChild(finalCanvas);
+
+              // Buat elemen <p> untuk NAMA di luar bingkai
+              const nameElement = document.createElement("p");
+              nameElement.className = "mt-3 font-semibold text-lg text-gray-800";
+              nameElement.textContent = guest.name;
+              div.appendChild(nameElement);
+
+              // Buat tombol download
+              const downloadBtn = document.createElement("a");
+              downloadBtn.textContent = "⬇️ Download";
+              downloadBtn.className = "mt-2 inline-block bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-700";
+              // Tombol download mengambil dari finalCanvas (yang TIDAK ada namanya)
+              downloadBtn.href = finalCanvas.toDataURL("image/png");
+              downloadBtn.download = `QR-${guest.name}.png`;
+              div.appendChild(downloadBtn);
+              
+              container.appendChild(div);
+            });
+          });
+        });
+    };
+
+    frameImage.onerror = function() {
+      console.error("Gagal memuat gambar bingkai. Periksa kembali URL gambar Anda.");
+      container.innerHTML = '<p class="text-red-500 col-span-full text-center">Error: Gagal memuat gambar bingkai. Silakan periksa URL gambar pada kode.</p>';
+    };
+  </script>
 </body>
 </html>
