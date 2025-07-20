@@ -3,8 +3,3 @@
 
 [functions.blobs]
   store = "checkins"
-
-[[redirects]]
-  from = "/*"
-  to = "/admin.html"
-  status = 200
