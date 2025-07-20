@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; }
+        #reader { width: 90%; max-width: 400px; margin: 20px auto; }
+        #result { margin-top: 20px; font-size: 1.2em; font-weight: bold; padding: 15px; }
+        .success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        .warning { color: #856404; background-color: #fff3cd; border: 1px solid #ffeeba; }
+    </style>
+</head>
+<body>
+    <h1>Scanner Check-in Tamu</h1>
+    <div id="reader"></div>
+    <div id="result"></div>
+
+    <script>
+        const resultDiv = document.getElementById('result');
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Hentikan pemindaian sejenak untuk memproses
+            html5QrcodeScanner.pause();
+            resultDiv.textContent = 'Memproses...';
+            resultDiv.className = '';
+
+            processCheckin(decodedText);
+        }
+        
+        async function processCheckin(guestId) {
+            try {
+                const response = await fetch('/.netlify/functions/process-checkin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: guestId })
+                });
+
+                const data = await response.json();
+
+                if (response.status === 200) { // Success
+                    resultDiv.textContent = `✅ Selamat Datang, ${data.guest.data.name}!`;
+                    resultDiv.className = 'success';
+                } else if (response.status === 409) { // Conflict / Already Checked In
+                    resultDiv.textContent = `⚠️ ${data.message} atas nama ${data.guest.data.name}.`;
+                    resultDiv.className = 'warning';
+                } else { // Other errors (e.g., Not Found)
+                    resultDiv.textContent = `❌ ${data.message}`;
+                    resultDiv.className = 'error';
+                }
+
+            } catch (error) {
+                resultDiv.textContent = '❌ Gagal terhubung ke server.';
+                resultDiv.className = 'error';
+            } finally {
+                // Lanjutkan pemindaian setelah 3 detik
+                setTimeout(() => {
+                    resultDiv.textContent = '';
+                    resultDiv.className = '';
+                    if (html5QrcodeScanner.getState() === 2) { // 2 is PAUSED state
+                       html5QrcodeScanner.resume();
+                    }
+                }, 3000);
+            }
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", { fps: 10, qrbox: 250 });
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+</body>
+</html>
