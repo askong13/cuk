@@ -18,7 +18,6 @@
         <thead class="bg-gray-200">
           <tr>
             <th class="border p-2">Nama</th>
-            <th class="border p-2">Email</th>
             <th class="border p-2">Status Check-in</th>
           </tr>
         </thead>
@@ -30,25 +29,21 @@
   </main>
 
   <footer class="bg-white p-4 text-center text-sm text-gray-500">
-    Partner with <a href="https://example.com" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
+    Partner with <a href="https://siskahandiska.com/" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
   </footer>
 
   <script>
-    fetch('/.netlify/functions/get-all-guests')
+    fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
       .then(res => res.json())
       .then(data => {
-        const tbody = document.getElementById('guest-list');
-        data.guests.forEach(guest => {
+        const tbody = document.getElementById("guest-list");
+        Object.entries(data || {}).forEach(([id, guest]) => {
           const row = `<tr>
             <td class="border p-2">${guest.name}</td>
-            <td class="border p-2">${guest.email}</td>
             <td class="border p-2">${guest.checkedIn ? '✅' : '❌'}</td>
           </tr>`;
           tbody.innerHTML += row;
         });
-      })
-      .catch(() => {
-        document.getElementById('guest-list').innerHTML = '<tr><td colspan="3" class="p-2 text-red-600">Gagal memuat data.</td></tr>';
       });
   </script>
 </body>
