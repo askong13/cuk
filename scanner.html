@@ -1,60 +1,171 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Scanner</title>
+  <title>QR Scanner</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    /* Menghilangkan border dan box-shadow bawaan dari html5-qrcode */
+    #reader {
+      border: none !important;
+      box-shadow: none !important;
+    }
+    /* Memastikan video memenuhi kontainer untuk tampilan full-screen */
+    #reader video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+    }
+    /* Animasi untuk bingkai pemindai */
+    @keyframes pulse-border {
+      0%, 100% { border-color: rgba(255, 255, 255, 0.8); }
+      50% { border-color: rgba(0, 255, 150, 0.9); }
+    }
+    .scan-frame {
+      animation: pulse-border 2.5s infinite;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-900 flex flex-col min-h-screen">
+<body class="bg-black text-white m-0 p-0 overflow-hidden">
 
-  <header class="bg-white shadow p-4 text-center font-bold text-xl">
-    QR Scanner - Hari Kebaya
-  </header>
+  <div id="container" class="relative w-screen h-screen">
 
-  <main class="flex-grow p-6 flex flex-col items-center">
-    <div id="reader" style="width: 300px;"></div>
-    <div id="result" class="mt-4 text-lg font-semibold"></div>
-  </main>
+    <div id="reader" class="w-full h-full"></div>
 
-  <footer class="bg-white p-4 text-center text-sm text-gray-500">
-    Partner with <a href="https://siskahandiska.com/" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
-  </footer>
+    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div class="scan-frame w-[250px] h-[250px] border-4 rounded-lg shadow-lg"></div>
+    </div>
+    
+    <header class="absolute top-0 left-0 right-0 bg-black bg-opacity-50 p-4 text-center font-bold text-xl">
+      Arahkan ke QR Code Tamu
+    </header>
+
+    <div id="result-overlay" class="absolute inset-0 bg-black bg-opacity-70 flex-col items-center justify-center p-4 text-center hidden">
+      <p id="result-icon" class="text-6xl mb-4"></p>
+      <p id="result-text" class="text-2xl font-semibold"></p>
+    </div>
+
+  </div>
 
   <script>
-    const resultDiv = document.getElementById("result");
+    const resultOverlay = document.getElementById("result-overlay");
+    const resultIcon = document.getElementById("result-icon");
+    const resultText = document.getElementById("result-text");
+    let lastScanTime = 0;
+    const scanCooldown = 3000; // 3 detik cooldown antar pindaian
 
+    /**
+     * Menampilkan hasil pindaian di overlay
+     * @param {string} message - Pesan yang akan ditampilkan.
+     * @param {boolean} isSuccess - Tentukan apakah pindaian berhasil atau gagal.
+     */
+    function showResult(message, isSuccess) {
+      // Set ikon dan warna berdasarkan status
+      resultIcon.innerHTML = isSuccess ? '✅' : '❌';
+      resultText.innerHTML = message;
+      resultOverlay.classList.remove('hidden');
+      resultOverlay.classList.add('flex');
+
+      // Sembunyikan overlay setelah beberapa detik
+      setTimeout(() => {
+        resultOverlay.classList.add('hidden');
+        resultOverlay.classList.remove('flex');
+      }, scanCooldown);
+    }
+
+    /**
+     * Fungsi yang dijalankan ketika QR code berhasil dipindai
+     * @param {string} decodedText - Teks dari hasil dekode QR code.
+     */
     function onScanSuccess(decodedText) {
-      resultDiv.innerHTML = "Memproses check-in...";
+      const now = Date.now();
+      // Mencegah pemindaian ganda dengan menambahkan cooldown
+      if (now - lastScanTime < scanCooldown) {
+        return;
+      }
+      lastScanTime = now;
 
+      showResult("Memproses check-in...", true);
+
+      // --- Logika Fetch Data Anda ---
       fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
         .then(res => res.json())
         .then(data => {
-          let foundId = null;
+          let foundGuest = null;
+          let guestId = null;
+
+          // Mencari tamu berdasarkan nama dari hasil pindaian
           for (const [id, guest] of Object.entries(data || {})) {
             if (guest.name === decodedText) {
-              foundId = id;
+              foundGuest = guest;
+              guestId = id;
               break;
             }
           }
 
-          if (foundId) {
-            fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${foundId}.json`, {
+          if (foundGuest) {
+            // Jika tamu sudah check-in sebelumnya
+            if (foundGuest.checkedIn) {
+              showResult(`Tamu ${decodedText} sudah check-in.`, false);
+              return;
+            }
+            
+            // Lakukan proses check-in
+            const updateUrl = `https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${guestId}.json`;
+            fetch(updateUrl, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ checkedIn: true })
+              body: JSON.stringify({ checkedIn: true, checkedInTimestamp: new Date().toISOString() }) // Menambahkan timestamp
             }).then(() => {
-              resultDiv.innerHTML = `<span class="text-green-600">Check-in berhasil untuk ${decodedText}!</span>`;
+              showResult(`Check-in berhasil untuk ${decodedText}!`, true);
+            }).catch(() => {
+              showResult("Gagal memperbarui data.", false);
             });
+
           } else {
-            resultDiv.innerHTML = `<span class="text-red-600">Tamu tidak ditemukan: ${decodedText}</span>`;
+            showResult(`Tamu tidak ditemukan: ${decodedText}`, false);
           }
+        })
+        .catch(error => {
+          console.error("Error fetching data:", error);
+          showResult("Koneksi ke server gagal.", false);
         });
     }
 
-    const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-    html5QrcodeScanner.render(onScanSuccess);
+    /**
+     * Fungsi yang dijalankan ketika terjadi error pindaian
+     * @param {string} errorMessage - Pesan error.
+     */
+    function onScanFailure(errorMessage) {
+      // Fungsi ini bisa diabaikan agar tidak menampilkan error 'QR code not found' terus-menerus
+      // console.warn(`QR scan error: ${errorMessage}`);
+    }
+
+    // Tunggu hingga seluruh halaman dimuat
+    document.addEventListener('DOMContentLoaded', () => {
+      // Menggunakan class Html5Qrcode, bukan Html5QrcodeScanner untuk kontrol penuh
+      const html5QrCode = new Html5Qrcode("reader");
+      const config = { 
+        fps: 10, 
+        qrbox: { width: 250, height: 250 } 
+      };
+
+      // Memulai kamera
+      html5QrCode.start(
+        { facingMode: "environment" }, // Memaksa penggunaan kamera belakang
+        config,
+        onScanSuccess,
+        onScanFailure
+      ).catch(err => {
+        // Tampilkan pesan jika kamera tidak bisa diakses
+        const readerDiv = document.getElementById("reader");
+        readerDiv.innerHTML = `<div class="w-full h-full flex items-center justify-center text-center p-4">
+                                <p class="text-red-400">Gagal mengakses kamera.<br>Pastikan Anda memberikan izin akses kamera untuk situs ini.<br><br>Error: ${err}</p>
+                               </div>`;
+      });
+    });
   </script>
 </body>
 </html>
