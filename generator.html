@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator QR Code Tamu</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 500px; margin: auto; padding: 20px; }
+        select { width: 100%; padding: 8px; margin-bottom: 10px; }
+        button { width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; cursor: pointer; }
+        #qrcode { width: 256px; height: 256px; margin: 20px auto; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Generator QR Code</h1>
+    <p>Pilih nama tamu untuk menampilkan QR code undangan.</p>
+    <form id="guest-form">
+        <select id="guest-select" required>
+            <option value="">-- Pilih Tamu --</option>
+        </select>
+        <button type="submit">Tampilkan QR Code</button>
+    </form>
+    <div id="qrcode"></div>
+
+    <script>
+        const guestSelect = document.getElementById('guest-select');
+        const form = document.getElementById('guest-form');
+        const qrcodeDiv = document.getElementById('qrcode');
+        let qrcode = null;
+
+        // 1. Muat daftar tamu dari database.json
+        async function loadGuests() {
+            try {
+                const response = await fetch('/database.json');
+                const guests = await response.json();
+                guests.forEach(guest => {
+                    const option = document.createElement('option');
+                    option.value = guest.id;
+                    option.textContent = `${guest.id}: ${guest.name}`;
+                    guestSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Gagal memuat database tamu:", error);
+                alert("Gagal memuat database tamu. Pastikan file database.json ada.");
+            }
+        }
+        
+        // 2. Event listener untuk menampilkan QR Code
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const selectedGuestId = guestSelect.value;
+            if (!selectedGuestId) {
+                alert('Silakan pilih tamu terlebih dahulu.');
+                return;
+            }
+            
+            qrcodeDiv.innerHTML = ''; // Kosongkan QR code sebelumnya
+            qrcode = new QRCode(qrcodeDiv, {
+                text: selectedGuestId, // Isi QR code adalah ID tamu
+                width: 256,
+                height: 256,
+            });
+        });
+
+        // Panggil fungsi saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', loadGuests);
+    </script>
+</body>
+</html>
