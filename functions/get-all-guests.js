@@ -1,17 +1,17 @@
-import { getStore } from "@netlify/blobs";
+const fs = require('fs');
+const path = require('path');
 
-export default async () => {
+exports.handler = async () => {
   try {
-    const store = getStore("checkins");
-    const { blobs } = await store.list();
+    const dataPath = path.join(__dirname, '../database.json');
+    const raw = fs.readFileSync(dataPath);
+    const database = JSON.parse(raw);
 
-    return new Response(JSON.stringify(blobs), {
-      headers: { "Content-Type": "application/json" },
-      status: 200,
-    });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-    });
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ success: true, guests: database.guests }),
+    };
+  } catch (err) {
+    return { statusCode: 500, body: JSON.stringify({ success: false, message: 'Gagal memuat data tamu.' }) };
   }
 };
