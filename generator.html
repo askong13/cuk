@@ -14,30 +14,36 @@
   </header>
 
   <main class="flex-grow p-6 flex flex-col items-center">
-    <input type="text" id="input-text" placeholder="Masukkan kode atau nama..." class="w-full max-w-md p-2 border rounded mb-4" />
-    <button onclick="generateQR()" class="bg-blue-600 text-white px-4 py-2 rounded shadow">Generate QR</button>
+    <input type="text" id="input-text" placeholder="Masukkan nama tamu..." class="w-full max-w-md p-2 border rounded mb-4" />
+    <button onclick="generateQR()" class="bg-blue-600 text-white px-4 py-2 rounded shadow mb-4">Generate QR</button>
     <div id="qrcode" class="mt-6"></div>
   </main>
 
   <footer class="bg-white p-4 text-center text-sm text-gray-500">
-    Partner with <a href="https://example.com" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
+    Partner with <a href="https://siskahandiska.com/" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
   </footer>
 
   <script>
     function generateQR() {
-      const text = document.getElementById('input-text').value;
+      const text = document.getElementById('input-text').value.trim();
       const qrDiv = document.getElementById('qrcode');
       qrDiv.innerHTML = '';
       if (text) {
         QRCode.toCanvas(document.createElement('canvas'), text, function (error, canvas) {
           if (!error) {
             qrDiv.appendChild(canvas);
+            // Tambah ke database
+            fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: text, checkedIn: false })
+            });
           } else {
             qrDiv.innerHTML = 'Gagal generate QR';
           }
         });
       } else {
-        qrDiv.innerHTML = 'Masukkan teks untuk generate QR';
+        qrDiv.innerHTML = 'Masukkan nama untuk generate QR';
       }
     }
   </script>
