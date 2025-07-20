@@ -1,58 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>QR Check-in | GUEST SCANNER</title>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  </head>
-  <body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col justify-between">
-    <!-- Header -->
-    <header class="bg-white shadow p-4 text-center text-xl font-bold">
-      QR Code Guest Check-in
-    </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scanner</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 flex flex-col min-h-screen">
 
-    <!-- Scanner Area -->
-    <main class="flex-grow flex flex-col items-center justify-center p-4">
-      <div id="reader" class="w-full max-w-md"></div>
-      <div id="result" class="mt-4 text-center font-medium"></div>
-    </main>
+  <header class="bg-white shadow p-4 text-center font-bold text-xl">
+    QR Scanner - Hari Kebaya
+  </header>
 
-    <!-- Footer Credit -->
-    <footer class="bg-white p-4 text-center text-sm text-gray-500">
-      Partner with <a href="https://example.com" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
-    </footer>
+  <main class="flex-grow p-6 flex flex-col items-center">
+    <div id="reader" style="width: 300px;"></div>
+    <div id="result" class="mt-4 text-lg font-semibold"></div>
+  </main>
 
-    <script>
-      const resultDiv = document.getElementById("result");
-      function onScanSuccess(decodedText, decodedResult) {
-        resultDiv.innerHTML = `<div class="bg-green-100 text-green-800 p-3 rounded shadow">Tamu terdeteksi: ${decodedText}</div>`;
+  <footer class="bg-white p-4 text-center text-sm text-gray-500">
+    Partner with <a href="https://siskahandiska.com/" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
+  </footer>
 
-        // Kirim ke backend
-        fetch("/.netlify/functions/process-checkin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: decodedText })
-        })
-        .then(response => response.json())
+  <script>
+    const resultDiv = document.getElementById("result");
+
+    function onScanSuccess(decodedText) {
+      resultDiv.innerHTML = "Memproses check-in...";
+
+      fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
+        .then(res => res.json())
         .then(data => {
-          if (data.success) {
-            resultDiv.innerHTML += `<div class="mt-2 text-green-600">Check-in berhasil!</div>`;
-          } else {
-            resultDiv.innerHTML += `<div class="mt-2 text-red-600">Check-in gagal: ${data.message}</div>`;
+          let foundId = null;
+          for (const [id, guest] of Object.entries(data || {})) {
+            if (guest.name === decodedText) {
+              foundId = id;
+              break;
+            }
           }
-        })
-        .catch(err => {
-          resultDiv.innerHTML += `<div class="mt-2 text-red-600">Terjadi kesalahan saat mengirim data.</div>`;
-        });
-      }
 
-      const html5QrcodeScanner = new Html5QrcodeScanner("reader", {
-        fps: 10,
-        qrbox: 250
-      });
-      html5QrcodeScanner.render(onScanSuccess);
-    </script>
-  </body>
+          if (foundId) {
+            fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${foundId}.json`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ checkedIn: true })
+            }).then(() => {
+              resultDiv.innerHTML = `<span class="text-green-600">Check-in berhasil untuk ${decodedText}!</span>`;
+            });
+          } else {
+            resultDiv.innerHTML = `<span class="text-red-600">Tamu tidak ditemukan: ${decodedText}</span>`;
+          }
+        });
+    }
+
+    const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+    html5QrcodeScanner.render(onScanSuccess);
+  </script>
+</body>
 </html>
