@@ -7,46 +7,29 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    /* Menghilangkan border dan box-shadow bawaan dari html5-qrcode */
-    #reader {
-      border: none !important;
-      box-shadow: none !important;
-    }
-    /* Memastikan video memenuhi kontainer untuk tampilan full-screen */
-    #reader video {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover !important;
-    }
-    /* Animasi untuk bingkai pemindai */
+    #reader { border: none !important; box-shadow: none !important; }
+    #reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
     @keyframes pulse-border {
       0%, 100% { border-color: rgba(255, 255, 255, 0.8); }
       50% { border-color: rgba(0, 255, 150, 0.9); }
     }
-    .scan-frame {
-      animation: pulse-border 2.5s infinite;
-    }
+    .scan-frame { animation: pulse-border 2.5s infinite; }
   </style>
 </head>
 <body class="bg-black text-white m-0 p-0 overflow-hidden">
 
   <div id="container" class="relative w-screen h-screen">
-
     <div id="reader" class="w-full h-full"></div>
-
     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
       <div class="scan-frame w-[250px] h-[250px] border-4 rounded-lg shadow-lg"></div>
     </div>
-    
     <header class="absolute top-0 left-0 right-0 bg-black bg-opacity-50 p-4 text-center font-bold text-xl">
       Arahkan ke QR Code Tamu
     </header>
-
     <div id="result-overlay" class="absolute inset-0 bg-black bg-opacity-70 flex-col items-center justify-center p-4 text-center hidden">
       <p id="result-icon" class="text-6xl mb-4"></p>
       <p id="result-text" class="text-2xl font-semibold"></p>
     </div>
-
   </div>
 
   <script>
@@ -54,21 +37,13 @@
     const resultIcon = document.getElementById("result-icon");
     const resultText = document.getElementById("result-text");
     let lastScanTime = 0;
-    const scanCooldown = 3000; // 3 detik cooldown antar pindaian
+    const scanCooldown = 3000; // 3 detik
 
-    /**
-     * Menampilkan hasil pindaian di overlay
-     * @param {string} message - Pesan yang akan ditampilkan.
-     * @param {boolean} isSuccess - Tentukan apakah pindaian berhasil atau gagal.
-     */
     function showResult(message, isSuccess) {
-      // Set ikon dan warna berdasarkan status
-      resultIcon.innerHTML = isSuccess ? '✅' : '❌';
+      resultIcon.innerHTML = isSuccess ? '✅' : '⚠️'; // Mengganti ikon 'X' menjadi '⚠️' untuk peringatan
       resultText.innerHTML = message;
       resultOverlay.classList.remove('hidden');
       resultOverlay.classList.add('flex');
-
-      // Sembunyikan overlay setelah beberapa detik
       setTimeout(() => {
         resultOverlay.classList.add('hidden');
         resultOverlay.classList.remove('flex');
@@ -76,27 +51,40 @@
     }
 
     /**
-     * Fungsi yang dijalankan ketika QR code berhasil dipindai
-     * @param {string} decodedText - Teks dari hasil dekode QR code.
+     * Fungsi baru untuk memformat timestamp menjadi waktu yang mudah dibaca (WIB)
+     * @param {string} isoTimestamp - Timestamp dalam format ISO (contoh: "2025-07-21T03:47:27.000Z")
+     * @returns {string} - Waktu terformat (contoh: "Senin, 21 Juli 2025 pukul 10:47 WIB")
      */
+    function formatWaktu(isoTimestamp) {
+      if (!isoTimestamp) return "Waktu tidak tercatat";
+      const date = new Date(isoTimestamp);
+      const options = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Asia/Jakarta', // Mengatur zona waktu ke Waktu Indonesia Barat
+        hour12: false
+      };
+      // Mengganti format default agar lebih sesuai
+      return `pukul ${date.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).replace('.', ':')}`;
+    }
+
     function onScanSuccess(decodedText) {
       const now = Date.now();
-      // Mencegah pemindaian ganda dengan menambahkan cooldown
-      if (now - lastScanTime < scanCooldown) {
-        return;
-      }
+      if (now - lastScanTime < scanCooldown) return;
       lastScanTime = now;
 
-      showResult("Memproses check-in...", true);
+      showResult("Memproses...", true);
 
-      // --- Logika Fetch Data Anda ---
       fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
         .then(res => res.json())
         .then(data => {
           let foundGuest = null;
           let guestId = null;
 
-          // Mencari tamu berdasarkan nama dari hasil pindaian
           for (const [id, guest] of Object.entries(data || {})) {
             if (guest.name === decodedText) {
               foundGuest = guest;
@@ -106,26 +94,29 @@
           }
 
           if (foundGuest) {
-            // Jika tamu sudah check-in sebelumnya
-            if (foundGuest.checkedIn) {
-              showResult(`Tamu ${decodedText} sudah check-in.`, false);
+            // --- LOGIKA BARU DI SINI ---
+            // Jika tamu sudah check-in, tampilkan notifikasi beserta waktunya
+            if (foundGuest.checkedIn && foundGuest.checkedInTimestamp) {
+              const waktuCheckin = formatWaktu(foundGuest.checkedInTimestamp);
+              const message = `Tamu ${decodedText} **SUDAH CHECK-IN**<br><small class="font-normal opacity-80">Pada ${waktuCheckin}</small>`;
+              showResult(message, false); // 'false' untuk menampilkan ikon peringatan ⚠️
               return;
             }
             
-            // Lakukan proses check-in
+            // Jika belum, lakukan proses check-in
             const updateUrl = `https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${guestId}.json`;
             fetch(updateUrl, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ checkedIn: true, checkedInTimestamp: new Date().toISOString() }) // Menambahkan timestamp
+              body: JSON.stringify({ checkedIn: true, checkedInTimestamp: new Date().toISOString() })
             }).then(() => {
-              showResult(`Check-in berhasil untuk ${decodedText}!`, true);
+              showResult(`Check-in berhasil:<br>**${decodedText}**`, true);
             }).catch(() => {
               showResult("Gagal memperbarui data.", false);
             });
 
           } else {
-            showResult(`Tamu tidak ditemukan: ${decodedText}`, false);
+            showResult(`Tamu tidak ditemukan: **${decodedText}**`, false);
           }
         })
         .catch(error => {
@@ -134,37 +125,18 @@
         });
     }
 
-    /**
-     * Fungsi yang dijalankan ketika terjadi error pindaian
-     * @param {string} errorMessage - Pesan error.
-     */
     function onScanFailure(errorMessage) {
-      // Fungsi ini bisa diabaikan agar tidak menampilkan error 'QR code not found' terus-menerus
-      // console.warn(`QR scan error: ${errorMessage}`);
+      // Abaikan error agar tidak mengganggu
     }
 
-    // Tunggu hingga seluruh halaman dimuat
     document.addEventListener('DOMContentLoaded', () => {
-      // Menggunakan class Html5Qrcode, bukan Html5QrcodeScanner untuk kontrol penuh
       const html5QrCode = new Html5Qrcode("reader");
-      const config = { 
-        fps: 10, 
-        qrbox: { width: 250, height: 250 } 
-      };
-
-      // Memulai kamera
-      html5QrCode.start(
-        { facingMode: "environment" }, // Memaksa penggunaan kamera belakang
-        config,
-        onScanSuccess,
-        onScanFailure
-      ).catch(err => {
-        // Tampilkan pesan jika kamera tidak bisa diakses
-        const readerDiv = document.getElementById("reader");
-        readerDiv.innerHTML = `<div class="w-full h-full flex items-center justify-center text-center p-4">
-                                <p class="text-red-400">Gagal mengakses kamera.<br>Pastikan Anda memberikan izin akses kamera untuk situs ini.<br><br>Error: ${err}</p>
-                               </div>`;
-      });
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+      html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+        .catch(err => {
+          const readerDiv = document.getElementById("reader");
+          readerDiv.innerHTML = `<div class="w-full h-full flex items-center justify-center text-center p-4"><p class="text-red-400">Gagal mengakses kamera.<br>Pastikan Anda memberikan izin akses kamera untuk situs ini.<br><br>Error: ${err}</p></div>`;
+        });
     });
   </script>
 </body>
