@@ -1,90 +1,70 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>QR Code Semua Tamu dengan Frame</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contoh Thumbnail dan Download</title>
+    <style>
+        /* CSS sederhana untuk tata letak yang lebih baik */
+        body {
+            font-family: sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .thumbnail {
+            max-width: 200px; /* Batasi lebar thumbnail */
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .download-links a {
+            display: inline-block;
+            margin: 5px;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .download-links a:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 text-gray-900 p-6">
+<body>
 
-  <h1 class="text-2xl font-bold mb-6 text-center">QR Code Semua Tamu</h1>
+    <div class="container">
+        <h1>Galeri Gambar</h1>
+        <p>Klik link di bawah gambar untuk mengunduh.</p>
 
-  <div id="qr-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div class="image-item">
+            <img src="path/ke/thumbnail-gambar.jpg" alt="Pemandangan Indah" class="thumbnail">
+
+            <div class="download-links">
+                <a href="path/ke/full-resolusi-gambar.png" download="Pemandangan-Resolusi-Tinggi.png">
+                    Download PNG 🖼️
+                </a>
+
+                <a href="path/ke/dokumen-gambar.pdf" download="Pemandangan-Versi-PDF.pdf">
+                    Download PDF 📄
+                </a>
+            </div>
+        </div>
+
     </div>
 
-  <footer class="mt-10 text-center text-sm text-gray-500">
-    Partner with <a href="https://siskahandiska.com/" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
-  </footer>
-
-  <script>
-    const container = document.getElementById("qr-container");
-    const backgroundUrl = 'https://i.imgur.com/8DaI7r1.png'; // URL Background Anda, saya re-upload agar cross-origin berfungsi.
-
-    fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
-      .then(res => res.json())
-      .then(data => {
-        Object.entries(data || {}).forEach(([id, guest]) => {
-          const div = document.createElement("div");
-          div.className = "bg-white p-4 rounded shadow text-center";
-
-          // Canvas utama yang akan ditampilkan dan diunduh
-          const finalCanvas = document.createElement("canvas");
-          const finalCanvasSize = 400; // Ukuran frame final (lebar & tinggi)
-          finalCanvas.width = finalCanvasSize;
-          finalCanvas.height = finalCanvasSize;
-          const ctx = finalCanvas.getContext("2d");
-
-          // 1. Muat gambar background
-          const bgImage = new Image();
-          bgImage.crossOrigin = "Anonymous"; // Penting untuk gambar dari domain lain!
-          bgImage.src = backgroundUrl;
-          
-          bgImage.onload = function() {
-            // 2. Gambar background ke canvas utama
-            ctx.drawImage(bgImage, 0, 0, finalCanvasSize, finalCanvasSize);
-
-            // 3. Buat QR code pada canvas tersembunyi
-            const qrCanvas = document.createElement('canvas');
-            QRCode.toCanvas(qrCanvas, guest.name, {
-              width: 250, // Ukuran QR code
-              errorCorrectionLevel: 'H',
-              margin: 1
-            }, function (error) {
-              if (error) {
-                console.error(error);
-                return;
-              }
-              
-              // 4. Gambar QR code di atas background
-              // Atur posisi QR code di tengah frame
-              const qrCodeSize = 230; // Sesuaikan ukuran QR code di dalam frame
-              const position = (finalCanvasSize - qrCodeSize) / 2;
-              ctx.drawImage(qrCanvas, position, position, qrCodeSize, qrCodeSize);
-
-              // Update link download setelah canvas selesai digambar
-              downloadBtn.href = finalCanvas.toDataURL("image/png");
-            });
-          };
-
-          const name = document.createElement("p");
-          name.className = "mt-4 font-medium text-base";
-          name.textContent = guest.name;
-
-          const downloadBtn = document.createElement("a");
-          downloadBtn.textContent = "⬇️ Download";
-          downloadBtn.className = "mt-2 inline-block text-blue-600 text-sm font-semibold";
-          downloadBtn.download = `${guest.name}.png`;
-          // Href akan diisi setelah canvas selesai digambar
-          downloadBtn.href = "#"; 
-          
-          div.appendChild(finalCanvas);
-          div.appendChild(name);
-          div.appendChild(downloadBtn);
-          container.appendChild(div);
-        });
-      });
-  </script>
 </body>
 </html>
