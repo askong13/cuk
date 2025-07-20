@@ -1,87 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Daftar Tamu</title>
-    <style>
-        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .status-hadir { color: green; font-weight: bold; }
-        .status-belum { color: gray; }
-        button { padding: 10px 15px; cursor: pointer; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-    <h1>Dashboard Tamu</h1>
-    <button id="refresh-btn">Refresh Data</button>
-    <p id="loading">Memuat data...</p>
-    <table id="guest-table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nama Tamu</th>
-                <th>Status</th>
-                <th>Waktu Check-in</th>
-            </tr>
+<body class="bg-gray-100 text-gray-900 flex flex-col min-h-screen">
+
+  <header class="bg-white shadow p-4 text-center font-bold text-xl">
+    Panel Admin - Daftar Tamu
+  </header>
+
+  <main class="flex-grow p-6">
+    <div class="overflow-x-auto bg-white rounded shadow p-4">
+      <table class="min-w-full table-auto border-collapse border border-gray-200">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="border p-2">Nama</th>
+            <th class="border p-2">Email</th>
+            <th class="border p-2">Status Check-in</th>
+          </tr>
         </thead>
-        <tbody></tbody>
-    </table>
+        <tbody id="guest-list">
+          <!-- Data tamu akan diisi via JS -->
+        </tbody>
+      </table>
+    </div>
+  </main>
 
-    <script>
-        const tableBody = document.querySelector('#guest-table tbody');
-        const loadingText = document.getElementById('loading');
-        const refreshBtn = document.getElementById('refresh-btn');
+  <footer class="bg-white p-4 text-center text-sm text-gray-500">
+    Partner with <a href="https://example.com" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
+  </footer>
 
-        async function fetchAndDisplayGuests() {
-            loadingText.textContent = 'Memuat data...';
-            loadingText.style.display = 'block';
-            tableBody.innerHTML = '';
-
-            try {
-                // 1. Ambil daftar semua tamu dari file JSON
-                const masterListResponse = await fetch('/database.json');
-                const masterGuestList = await masterListResponse.json();
-
-                // 2. Ambil daftar tamu yang sudah check-in dari function
-                const checkedInResponse = await fetch('/.netlify/functions/get-all-guests');
-                const checkedInData = await checkedInResponse.json();
-                
-                // Buat Peta (Map) untuk pencarian cepat data check-in berdasarkan ID
-                const checkedInMap = new Map(checkedInData.map(item => [item.key, item.metadata]));
-
-                // 3. Gabungkan data dan tampilkan di tabel
-                masterGuestList.forEach(guest => {
-                    const row = tableBody.insertRow();
-                    row.insertCell(0).textContent = guest.id;
-                    row.insertCell(1).textContent = guest.name;
-
-                    const statusCell = row.insertCell(2);
-                    const timeCell = row.insertCell(3);
-
-                    if (checkedInMap.has(String(guest.id))) {
-                        const metadata = checkedInMap.get(String(guest.id));
-                        statusCell.textContent = 'Hadir';
-                        statusCell.className = 'status-hadir';
-                        timeCell.textContent = new Date(metadata.timestamp).toLocaleString('id-ID');
-                    } else {
-                        statusCell.textContent = 'Belum Hadir';
-                        statusCell.className = 'status-belum';
-                        timeCell.textContent = '-';
-                    }
-                });
-
-                loadingText.style.display = 'none';
-
-            } catch (error) {
-                loadingText.textContent = 'Error: ' + error.message;
-            }
-        }
-
-        refreshBtn.addEventListener('click', fetchAndDisplayGuests);
-        document.addEventListener('DOMContentLoaded', fetchAndDisplayGuests);
-    </script>
+  <script>
+    fetch('/.netlify/functions/get-all-guests')
+      .then(res => res.json())
+      .then(data => {
+        const tbody = document.getElementById('guest-list');
+        data.guests.forEach(guest => {
+          const row = `<tr>
+            <td class="border p-2">${guest.name}</td>
+            <td class="border p-2">${guest.email}</td>
+            <td class="border p-2">${guest.checkedIn ? '✅' : '❌'}</td>
+          </tr>`;
+          tbody.innerHTML += row;
+        });
+      })
+      .catch(() => {
+        document.getElementById('guest-list').innerHTML = '<tr><td colspan="3" class="p-2 text-red-600">Gagal memuat data.</td></tr>';
+      });
+  </script>
 </body>
 </html>
