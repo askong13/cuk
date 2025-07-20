@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>QR Code Semua Tamu</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -30,16 +30,32 @@
           div.className = "bg-white p-4 rounded shadow text-center";
 
           const canvas = document.createElement("canvas");
-          QRCode.toCanvas(canvas, guest.name, { width: 150 }, (error) => {
+          canvas.width = 300;
+          canvas.height = 300;
+
+          QRCode.toCanvas(canvas, guest.name, {
+            width: 300,
+            errorCorrectionLevel: 'H'
+          }, function (error) {
             if (error) console.error(error);
           });
 
           const name = document.createElement("p");
-          name.className = "mt-2 font-medium text-sm";
+          name.className = "mt-4 font-medium text-base";
           name.textContent = guest.name;
+
+          const downloadBtn = document.createElement("a");
+          downloadBtn.textContent = "⬇️ Download";
+          downloadBtn.className = "mt-2 inline-block text-blue-600 text-sm font-semibold";
+          downloadBtn.href = "#";
+          downloadBtn.download = `${guest.name}.png`;
+          downloadBtn.onclick = function () {
+            downloadBtn.href = canvas.toDataURL("image/png");
+          };
 
           div.appendChild(canvas);
           div.appendChild(name);
+          div.appendChild(downloadBtn);
           container.appendChild(div);
         });
       });
