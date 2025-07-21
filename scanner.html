@@ -3,69 +3,101 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>E-Invitation Scanner - Hari Kebaya 2025</title>
+  <title>Manual E-Invitation Scanner</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    #reader__scan_region {
-      border-radius: 0.75rem;
+    /* Menghilangkan tombol 'scan from file' dan kontrol kamera lainnya dari library */
+    #reader__dashboard_section_csr, #reader__dashboard_section_swap_camera {
+      display: none !important;
     }
-    .notification-card {
-      transition: all 0.3s ease-in-out;
+    #reader {
+      border: none !important;
+      border-radius: 1rem;
+      overflow: hidden;
+    }
+    #reader__scan_region {
+      border-radius: 1rem;
+    }
+    .btn {
+      transition: all 0.2s ease-in-out;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
   </style>
 </head>
-<body class="bg-gradient-to-br from-gray-200 to-gray-300 text-gray-900 flex flex-col items-center justify-center min-h-screen p-4 font-sans">
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4 font-sans">
 
-  <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center transform transition-all duration-500">
+  <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 max-w-md w-full text-center">
     
     <header class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-800">E-Invitation Scanner</h1>
-      <p class="text-lg text-gray-500 mt-1">Hari Kebaya Nasional 2025</p>
+      <h1 class="text-3xl font-bold text-white">E-Invitation Scanner</h1>
+      <p class="text-lg text-gray-400 mt-1">Hari Kebaya Nasional 2025</p>
     </header>
 
     <main class="flex-grow flex flex-col items-center">
-      <div id="reader" class="w-full max-w-xs md:max-w-sm mb-4"></div>
-      
-      <div id="result" class="mt-4 w-full min-h-[80px] flex items-center justify-center">
-        <p class="text-gray-400">Arahkan QR Code Undangan ke Kamera</p>
+      <div id="scanner-container" class="w-full max-w-xs md:max-w-sm">
+        <div id="reader"></div>
       </div>
+      
+      <div id="result" class="mt-6 w-full min-h-[120px] flex flex-col items-center justify-center p-4 bg-gray-700/50 rounded-lg">
+        </div>
     </main>
 
   </div>
 
-  <footer class="absolute bottom-0 w-full p-4 text-center text-sm text-gray-600">
-    Partner with <a href="https://siskahandiska.com/" class="text-indigo-600 font-semibold" target="_blank">Siska Handiska Creative</a>
+  <footer class="absolute bottom-0 w-full p-4 text-center text-sm text-gray-500">
+    Partner with <a href="https://siskahandiska.com/" class="text-indigo-400 font-semibold" target="_blank">Siska Handiska Creative</a>
   </footer>
 
   <script>
     const resultDiv = document.getElementById("result");
+    const readerDiv = document.getElementById("reader");
+    let scannedGuestName = null; // Menyimpan nama tamu yang di-scan
 
-    function playSound(type) {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
-      if (type === 'success') {
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
-      } else if (type === 'warning') {
-        oscillator.type = 'triangle';
-        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-      } else {
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(220, audioCtx.currentTime);
-      }
-      oscillator.start();
-      gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
-      oscillator.stop(audioCtx.currentTime + 0.3);
+    const initialResultContent = `
+      <svg class="w-12 h-12 text-gray-500 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 5h1m-6.464 6.464l.707.707M4 12H3m14.071 7.071l-.707-.707M5.636 5.636l.707.707M12 20v-1" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8a4 4 0 100 8 4 4 0 000-8z" />
+      </svg>
+      <p class="text-gray-400">Arahkan kamera ke QR Code...</p>
+    `;
+    
+    // Fungsi untuk memulai atau merestart scanner
+    function startScanner() {
+        readerDiv.style.display = 'block';
+        resultDiv.innerHTML = initialResultContent;
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    }
+    
+    // Fungsi yang dipanggil saat scan berhasil
+    function onScanSuccess(decodedText, decodedResult) {
+      // Hentikan scanner agar tidak terus menerus memindai
+      html5QrcodeScanner.clear().catch(error => {
+          console.error("Gagal membersihkan scanner.", error);
+      });
+      readerDiv.style.display = 'none'; // Sembunyikan area video
+      
+      scannedGuestName = decodedText; // Simpan nama tamu
+
+      // Tampilkan nama tamu dan tombol check-in
+      resultDiv.innerHTML = `
+        <p class="text-gray-300 mb-2">Tamu Terdeteksi:</p>
+        <p class="text-2xl font-bold text-white mb-4">${scannedGuestName}</p>
+        <button onclick="handleCheckIn()" class="btn bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg w-full">
+          Lakukan Check-In
+        </button>
+      `;
     }
 
-    function onScanSuccess(decodedText, decodedResult) {
-      resultDiv.innerHTML = `<p class="text-blue-600 animate-pulse">Memvalidasi E-Invitation...</p>`;
+    // Fungsi yang dipanggil saat tombol "Lakukan Check-In" diklik
+    function handleCheckIn() {
+      if (!scannedGuestName) return;
+
+      resultDiv.innerHTML = `<p class="text-blue-400 animate-pulse">Memvalidasi E-Invitation...</p>`;
+      
       fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
         .then(res => {
           if (!res.ok) throw new Error('Gagal mengambil data dari server.');
@@ -75,68 +107,75 @@
           let guestId = null;
           let guestData = null;
           for (const [id, guest] of Object.entries(data || {})) {
-            if (guest.name === decodedText) {
+            if (guest.name === scannedGuestName) {
               guestId = id;
               guestData = guest;
               break;
             }
           }
+
+          let notificationHtml = '';
           if (guestId && guestData) {
             if (guestData.checkedIn) {
               playSound('warning');
-              resultDiv.innerHTML = `
-                <div class="notification-card bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 w-full rounded-lg" role="alert">
+              notificationHtml = `
+                <div class="notification-card bg-yellow-500/20 border border-yellow-500 text-yellow-300 p-4 w-full rounded-lg text-center">
                   <p class="font-bold">Sudah Ter-scan</p>
-                  <p>E-Invitation untuk <strong>${decodedText}</strong> sudah di-scan sebelumnya.</p>
+                  <p>Undangan untuk <strong>${scannedGuestName}</strong> sudah di-scan.</p>
                 </div>`;
             } else {
-              fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${guestId}.json`, {
+              // Lakukan check-in
+              return fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${guestId}.json`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ checkedIn: true, checkedInTimestamp: new Date().toISOString() })
               }).then(() => {
                 playSound('success');
-                resultDiv.innerHTML = `
-                  <div class="notification-card bg-green-100 border-l-4 border-green-500 text-green-800 p-4 w-full rounded-lg" role="alert">
+                notificationHtml = `
+                  <div class="notification-card bg-green-500/20 border border-green-500 text-green-300 p-4 w-full rounded-lg text-center">
                     <p class="font-bold">Berhasil!</p>
-                    <p>Selamat datang, <strong>${decodedText}</strong>. Check-in berhasil!</p>
+                    <p>Selamat datang, <strong>${scannedGuestName}</strong>!</p>
                   </div>`;
+                // Set hasil ke div
+                resultDiv.innerHTML = `${notificationHtml}<button onclick="startScanner()" class="btn mt-4 bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg w-full">Scan Tamu Berikutnya</button>`;
               });
             }
           } else {
             playSound('error');
-            resultDiv.innerHTML = `
-              <div class="notification-card bg-red-100 border-l-4 border-red-500 text-red-800 p-4 w-full rounded-lg" role="alert">
+            notificationHtml = `
+              <div class="notification-card bg-red-500/20 border border-red-500 text-red-300 p-4 w-full rounded-lg text-center">
                 <p class="font-bold">Tidak Ditemukan</p>
-                <p>E-Invitation dengan nama <strong>${decodedText}</strong> tidak terdaftar.</p>
+                <p>Undangan <strong>${scannedGuestName}</strong> tidak terdaftar.</p>
               </div>`;
           }
+          // Set hasil ke div dan tambahkan tombol scan lagi
+          resultDiv.innerHTML = `${notificationHtml}<button onclick="startScanner()" class="btn mt-4 bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg w-full">Scan Tamu Berikutnya</button>`;
         })
         .catch(error => {
           playSound('error');
           resultDiv.innerHTML = `
-              <div class="notification-card bg-red-100 border-l-4 border-red-500 text-red-800 p-4 w-full rounded-lg" role="alert">
-                <p class="font-bold">Error</p>
-                <p>Terjadi masalah: ${error.message}</p>
-              </div>`;
+              <div class="notification-card bg-red-500/20 border border-red-500 text-red-300 p-4 w-full rounded-lg text-center">
+                <p class="font-bold">Error</p><p>${error.message}</p>
+              </div>
+              <button onclick="startScanner()" class="btn mt-4 bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg w-full">Coba Lagi</button>`;
         });
     }
 
-    function onScanFailure(error) {
-      // Fungsi ini bisa dibiarkan kosong
-    }
-
-    // --- PERUBAHAN DI SINI ---
-    const html5QrcodeScanner = new Html5QrcodeScanner(
-      "reader",
-      { 
+    // Konfigurasi scanner
+    const html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
         fps: 10, 
         qrbox: { width: 250, height: 250 },
-        facingMode: "environment" // Langsung meminta kamera belakang
-      },
-      /* verbose= */ false
+        facingMode: "environment"
+      }, 
+      false
     );
-    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+    // Fungsi lain yang tidak terpakai
+    function onScanFailure(error) { /* Biarkan kosong */ }
+    function playSound(type) { /* ... fungsi suara tetap sama ... */ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();const oscillator = audioCtx.createOscillator();const gainNode = audioCtx.createGain();oscillator.connect(gainNode);gainNode.connect(audioCtx.destination);gainNode.gain.setValueAtTime(0, audioCtx.currentTime);gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);if (type === 'success') {oscillator.type = 'sine';oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);} else if (type === 'warning') {oscillator.type = 'triangle';oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);} else {oscillator.type = 'square';oscillator.frequency.setValueAtTime(220, audioCtx.currentTime);}oscillator.start();gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);oscillator.stop(audioCtx.currentTime + 0.3); }
+
+    // Mulai scanner saat halaman dimuat
+    startScanner();
   </script>
 </body>
 </html>
