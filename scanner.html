@@ -7,9 +7,6 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    /* FIX: Menggunakan selector #reader__dashboard untuk menyembunyikan
-      SELURUH panel kontrol bawaan library, termasuk tombol file scan.
-    */
     #reader__dashboard {
       display: none !important;
     }
@@ -52,83 +49,79 @@
   </footer>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const resultDiv = document.getElementById("result");
-        const readerDiv = document.getElementById("reader");
-        let scannedGuestName = null;
+    const resultDiv = document.getElementById("result");
+    const readerDiv = document.getElementById("reader");
+    let scannedGuestName = null;
 
-        const initialResultContent = `
-          <svg class="w-12 h-12 text-gray-400 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v1m6 5h1m-6.464 6.464l.707.707M4 12H3m14.071 7.071l-.707-.707M5.636 5.636l.707.707M12 20v-1" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8a4 4 0 100 8 4 4 0 000-8z" /></svg>
-          <p class="text-gray-500">Arahkan kamera ke QR Code...</p>
-        `;
+    const initialResultContent = `
+      <svg class="w-12 h-12 text-gray-400 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v1m6 5h1m-6.464 6.464l.707.707M4 12H3m14.071 7.071l-.707-.707M5.636 5.636l.707.707M12 20v-1" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8a4 4 0 100 8 4 4 0 000-8z" /></svg>
+      <p class="text-gray-500">Arahkan kamera ke QR Code...</p>
+    `;
 
-        const html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-            fps: 10, 
-            qrbox: { width: 250, height: 250 },
-            facingMode: "environment"
-          }, false
-        );
+    const html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+        fps: 10, 
+        qrbox: { width: 250, height: 250 },
+        facingMode: "environment"
+      }, false
+    );
 
-        function startScanner() {
-            readerDiv.style.display = 'block';
-            resultDiv.innerHTML = initialResultContent;
-            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-        }
+    function startScanner() {
+        readerDiv.style.display = 'block';
+        resultDiv.innerHTML = initialResultContent;
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    }
 
-        function onScanSuccess(decodedText) {
-          html5QrcodeScanner.clear().catch(error => console.error("Gagal membersihkan scanner.", error));
-          readerDiv.style.display = 'none';
-          scannedGuestName = decodedText;
+    function onScanSuccess(decodedText) {
+      html5QrcodeScanner.clear().catch(error => console.error("Gagal membersihkan scanner.", error));
+      readerDiv.style.display = 'none';
+      scannedGuestName = decodedText;
 
-          resultDiv.innerHTML = `<p class="text-gray-600 mb-2">Tamu Terdeteksi:</p><p class="text-2xl font-bold text-gray-800 mb-4">${scannedGuestName}</p><button onclick="window.handleCheckIn()" class="btn bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg w-full shadow-md">Lakukan Check-In</button>`;
-        }
+      resultDiv.innerHTML = `<p class="text-gray-600 mb-2">Tamu Terdeteksi:</p><p class="text-2xl font-bold text-gray-800 mb-4">${scannedGuestName}</p><button onclick="handleCheckIn()" class="btn bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg w-full shadow-md">Lakukan Check-In</button>`;
+    }
 
-        window.handleCheckIn = function() {
-          if (!scannedGuestName) return;
-          resultDiv.innerHTML = `<p class="text-blue-600 animate-pulse">Memvalidasi E-Invitation...</p>`;
-          
-          fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
-            .then(res => res.ok ? res.json() : Promise.reject('Gagal mengambil data.'))
-            .then(data => {
-              let guestId = null, guestData = null;
-              for (const [id, guest] of Object.entries(data || {})) {
-                if (guest.name === scannedGuestName) { guestId = id; guestData = guest; break; }
-              }
+    function handleCheckIn() {
+      if (!scannedGuestName) return;
+      resultDiv.innerHTML = `<p class="text-blue-600 animate-pulse">Memvalidasi E-Invitation...</p>`;
+      
+      fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
+        .then(res => res.ok ? res.json() : Promise.reject('Gagal mengambil data.'))
+        .then(data => {
+          let guestId = null, guestData = null;
+          for (const [id, guest] of Object.entries(data || {})) {
+            if (guest.name === scannedGuestName) { guestId = id; guestData = guest; break; }
+          }
 
-              let notificationHtml = '';
-              if (guestId && guestData) {
-                if (guestData.checkedIn) {
-                  playSound('warning');
-                  notificationHtml = `<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 w-full rounded-md text-left"><p class="font-bold">Sudah Ter-scan</p><p>Undangan untuk <strong>${scannedGuestName}</strong> sudah di-scan.</p></div>`;
-                } else {
-                  return fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${guestId}.json`, {
-                    method: "PATCH", body: JSON.stringify({ checkedIn: true, checkedInTimestamp: new Date().toISOString() }), headers: { "Content-Type": "application/json" }
-                  }).then(() => {
-                    playSound('success');
-                    notificationHtml = `<div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-4 w-full rounded-md text-left"><p class="font-bold">Berhasil!</p><p>Selamat datang, <strong>${scannedGuestName}</strong>!</p></div>`;
-                    resultDiv.innerHTML = `${notificationHtml}<button onclick="window.startScanner()" class="btn mt-4 bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-lg w-full shadow-md">Scan Tamu Berikutnya</button>`;
-                  });
-                }
-              } else {
-                playSound('error');
-                notificationHtml = `<div class="bg-red-100 border-l-4 border-red-500 text-red-800 p-4 w-full rounded-md text-left"><p class="font-bold">Tidak Ditemukan</p><p>Undangan <strong>${scannedGuestName}</strong> tidak terdaftar.</p></div>`;
-              }
-              resultDiv.innerHTML = `${notificationHtml}<button onclick="window.startScanner()" class="btn mt-4 bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-lg w-full shadow-md">Scan Tamu Berikutnya</button>`;
-            })
-            .catch(error => {
-              playSound('error');
-              resultDiv.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-800 p-4 w-full rounded-md text-left"><p class="font-bold">Error</p><p>${error.toString()}</p></div><button onclick="window.startScanner()" class="btn mt-4 bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-lg w-full shadow-md">Coba Lagi</button>`;
-            });
-        }
-        
-        // Membuat fungsi bisa diakses global oleh tombol onclick
-        window.startScanner = startScanner;
+          let notificationHtml = '';
+          if (guestId && guestData) {
+            if (guestData.checkedIn) {
+              playSound('warning');
+              notificationHtml = `<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 w-full rounded-md text-left"><p class="font-bold">Sudah Ter-scan</p><p>Undangan untuk <strong>${scannedGuestName}</strong> sudah di-scan.</p></div>`;
+            } else {
+              return fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${guestId}.json`, {
+                method: "PATCH", body: JSON.stringify({ checkedIn: true, checkedInTimestamp: new Date().toISOString() }), headers: { "Content-Type": "application/json" }
+              }).then(() => {
+                playSound('success');
+                notificationHtml = `<div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-4 w-full rounded-md text-left"><p class="font-bold">Berhasil!</p><p>Selamat datang, <strong>${scannedGuestName}</strong>!</p></div>`;
+                resultDiv.innerHTML = `${notificationHtml}<button onclick="startScanner()" class="btn mt-4 bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-lg w-full shadow-md">Scan Tamu Berikutnya</button>`;
+              });
+            }
+          } else {
+            playSound('error');
+            notificationHtml = `<div class="bg-red-100 border-l-4 border-red-500 text-red-800 p-4 w-full rounded-md text-left"><p class="font-bold">Tidak Ditemukan</p><p>Undangan <strong>${scannedGuestName}</strong> tidak terdaftar.</p></div>`;
+          }
+          resultDiv.innerHTML = `${notificationHtml}<button onclick="startScanner()" class="btn mt-4 bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-lg w-full shadow-md">Scan Tamu Berikutnya</button>`;
+        })
+        .catch(error => {
+          playSound('error');
+          resultDiv.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-800 p-4 w-full rounded-md text-left"><p class="font-bold">Error</p><p>${error.toString()}</p></div><button onclick="startScanner()" class="btn mt-4 bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-lg w-full shadow-md">Coba Lagi</button>`;
+        });
+    }
 
-        function onScanFailure(error) { /* Biarkan kosong */ }
-        function playSound(type) { const audioCtx = new (window.AudioContext || window.webkitAudioContext)();const oscillator = audioCtx.createOscillator();const gainNode = audioCtx.createGain();oscillator.connect(gainNode);gainNode.connect(audioCtx.destination);gainNode.gain.setValueAtTime(0, audioCtx.currentTime);gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);if (type === 'success') {oscillator.type = 'sine';oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);} else if (type === 'warning') {oscillator.type = 'triangle';oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);} else {oscillator.type = 'square';oscillator.frequency.setValueAtTime(220, audioCtx.currentTime);}oscillator.start();gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);oscillator.stop(audioCtx.currentTime + 0.3); }
+    function onScanFailure(error) { /* Biarkan kosong */ }
+    function playSound(type) { const audioCtx = new (window.AudioContext || window.webkitAudioContext)();const oscillator = audioCtx.createOscillator();const gainNode = audioCtx.createGain();oscillator.connect(gainNode);gainNode.connect(audioCtx.destination);gainNode.gain.setValueAtTime(0, audioCtx.currentTime);gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);if (type === 'success') {oscillator.type = 'sine';oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);} else if (type === 'warning') {oscillator.type = 'triangle';oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);} else {oscillator.type = 'square';oscillator.frequency.setValueAtTime(220, audioCtx.currentTime);}oscillator.start();gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);oscillator.stop(audioCtx.currentTime + 0.3); }
 
-        startScanner();
-    });
+    // Langsung panggil fungsi untuk memulai scanner
+    startScanner();
   </script>
 </body>
 </html>
