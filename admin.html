@@ -1,149 +1,339 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Panel Admin - Pesona Kebaya</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background-color: #FFF7E0;
-    }
-    .btn {
-      padding: 8px 16px;
-      font-weight: 600;
-      border-radius: 8px;
-      transition: all 0.3s ease;
-    }
-    .btn-edit {
-      background-color: #F59E0B;
-      color: white;
-    }
-    .btn-edit:hover {
-      background-color: #d97706;
-    }
-    .btn-reset {
-      background-color: #DC2626;
-      color: white;
-    }
-    .btn-reset:hover {
-      background-color: #b91c1c;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Check-In - Hari Kebaya 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f7fafc; /* gray-100 */
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        /* Custom toggle switch style */
+        .toggle-checkbox:checked ~ .toggle-dot { transform: translateX(100%); background-color: #c026d3; /* fuchsia-700 */ }
+        .toggle-checkbox:checked + .toggle-bg { background-color: #f0abfc; /* fuchsia-300 */ }
+        
+        /* Modal transition */
+        .modal { transition: opacity 0.3s ease, visibility 0.3s ease; }
+        .modal-content { transition: transform 0.3s ease; }
+        .modal.visible { visibility: visible; opacity: 1; }
+        .modal.visible .modal-content { transform: scale(1); }
+    </style>
 </head>
-<body class="text-gray-900 flex flex-col min-h-screen">
+<body class="bg-gray-100 text-gray-800">
 
-  <header class="bg-[#FFC236] shadow p-6 text-center text-white font-extrabold text-3xl">
-    Panel Admin
-    <p class="text-base font-medium mt-2">Pesona Kebaya Nusantara</p>
-  </header>
+    <header class="bg-white shadow-md sticky top-0 z-20">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Daftar Tamu Hari Kebaya 2025</h1>
+            <div id="stats" class="text-gray-600 mt-1 text-sm md:text-base">Memuat data statistik...</div>
+        </div>
+    </header>
 
-  <main class="flex-grow p-6 max-w-6xl mx-auto">
-    <div class="mb-6 text-right">
-      <button id="resetAllBtn" class="btn btn-reset">🔄 Reset Semua Check-in</button>
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 items-center">
+            <div class="relative">
+                <input type="text" id="search-input" placeholder="Cari nama tamu..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500 shadow-sm">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3 md:justify-end">
+                <button id="addGuestBtn" class="w-full sm:w-auto bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2 shadow-md">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    <span>Tambah Tamu</span>
+                </button>
+                <button id="resetAllBtn" class="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2 shadow-md">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M4 4l16 16"></path></svg>
+                    <span>Reset Check-in</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="loading-indicator" class="text-center py-10">
+            <p class="text-gray-500 text-lg">Memuat daftar tamu...</p>
+        </div>
+        <div id="guest-list-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            </div>
+        <div id="no-results" class="hidden text-center py-10">
+            <p class="text-gray-500 text-lg">Tamu tidak ditemukan.</p>
+        </div>
+    </main>
+
+    <div id="guest-modal" class="modal fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 invisible opacity-0">
+        <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-md p-6 transform scale-95">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="modal-title" class="text-2xl font-bold"></h2>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <form id="guest-form" novalidate>
+                <div class="mb-5">
+                    <label for="guest-name" class="block text-gray-700 font-medium mb-2">Nama Tamu</label>
+                    <input type="text" id="guest-name" name="name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500" required>
+                </div>
+                <div class="mb-8">
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <span class="text-gray-700 font-medium">Status Check-In</span>
+                        <div class="relative">
+                            <input type="checkbox" id="guest-checkedIn" class="toggle-checkbox sr-only">
+                            <div class="toggle-bg block bg-gray-200 w-14 h-8 rounded-full transition"></div>
+                            <div class="toggle-dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform"></div>
+                        </div>
+                    </label>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancelBtn" class="px-5 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">Batal</button>
+                    <button type="submit" class="px-5 py-2 bg-fuchsia-600 text-white rounded-lg hover:bg-fuchsia-700 transition shadow-md">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
     </div>
+    
+    <script>
+        const API_BASE_URL = "https://harikebaya-2025-default-rtdb.firebaseio.com/guests";
 
-    <div class="overflow-x-auto bg-white rounded-xl shadow p-6">
-      <table class="min-w-full table-auto border-collapse">
-        <thead class="bg-yellow-100 text-gray-700">
-          <tr>
-            <th class="border-b-2 border-gray-300 p-3 text-left">Nama</th>
-            <th class="border-b-2 border-gray-300 p-3 text-center">Status</th>
-            <th class="border-b-2 border-gray-300 p-3 text-center">Jam Check-in</th>
-            <th class="border-b-2 border-gray-300 p-3 text-center">Aksi</th>
-          </tr>
-        </thead>
-        <tbody id="guest-list" class="text-center">
-          <!-- Data tamu diisi di sini -->
-        </tbody>
-      </table>
-    </div>
-  </main>
+        // --- DOM Elements ---
+        const guestListContainer = document.getElementById("guest-list-container");
+        const loadingIndicator = document.getElementById("loading-indicator");
+        const noResults = document.getElementById("no-results");
+        const statsEl = document.getElementById("stats");
+        const searchInput = document.getElementById("search-input");
+        
+        // Modal Elements
+        const modal = document.getElementById("guest-modal");
+        const modalTitle = document.getElementById("modal-title");
+        const guestForm = document.getElementById("guest-form");
+        const guestNameInput = document.getElementById("guest-name");
+        const guestCheckedInInput = document.getElementById("guest-checkedIn");
+        
+        // Buttons
+        const addGuestBtn = document.getElementById("addGuestBtn");
+        const resetAllBtn = document.getElementById("resetAllBtn");
+        const cancelBtn = document.getElementById("cancelBtn");
+        const closeModalBtn = document.getElementById("closeModalBtn");
 
-  <footer class="bg-white p-4 text-center text-sm text-gray-500 mt-6">
-    Partner with <a href="https://siskahandiska.com/" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
-  </footer>
+        // --- State ---
+        let globalGuestData = {};
+        let editingGuestId = null;
 
-<!-- 🟡 HANYA BAGIAN SCRIPT DI BAWAH SAJA YANG DIREVISI -->
+        // --- Functions ---
 
-<script>
-  const tbody = document.getElementById("guest-list");
-  let guestData = {}; // disimpan global agar bisa dipakai untuk reset
+        /**
+         * Menampilkan data tamu ke dalam bentuk kartu.
+         * @param {Object} guestsToRender - Objek tamu yang akan ditampilkan.
+         */
+        function renderGuests(guestsToRender) {
+            guestListContainer.innerHTML = '';
+            loadingIndicator.style.display = 'none';
 
-  function loadGuests() {
-    tbody.innerHTML = '';
-    fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
-      .then(res => res.json())
-      .then(data => {
-        guestData = data || {};
-        Object.entries(guestData).forEach(([id, guest]) => {
-          const name = guest.name || '(Tanpa Nama)';
-          const checkedIn = guest.checkedIn ? '✅' : '❌';
-          const time = guest.checkinTime
-            ? new Date(guest.checkinTime).toLocaleString("id-ID")
-            : '-';
-          const row = document.createElement("tr");
-          row.className = "hover:bg-yellow-50";
-          row.innerHTML = `
-            <td class="p-3 font-medium">${name}</td>
-            <td class="p-3 text-center">${checkedIn}</td>
-            <td class="p-3 text-center">${time}</td>
-            <td class="p-3 text-center">
-              <button class="btn btn-edit" onclick="toggleCheckIn('${id}', ${guest.checkedIn})">✏️ Edit</button>
-            </td>
-          `;
-          tbody.appendChild(row);
+            const guestEntries = Object.entries(guestsToRender);
+            noResults.style.display = guestEntries.length === 0 ? 'block' : 'none';
+
+            guestEntries.forEach(([id, guest]) => {
+                const name = guest.name || '(Tanpa Nama)';
+                const isCheckedIn = guest.checkedIn;
+                const time = guest.checkinTime ? new Date(guest.checkinTime).toLocaleString("id-ID", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }) : '-';
+
+                const card = document.createElement("div");
+                card.className = `bg-white rounded-xl shadow-md overflow-hidden transform hover:-translate-y-1 transition-all duration-300 ${isCheckedIn ? 'border-l-4 border-fuchsia-500' : ''}`;
+                
+                card.innerHTML = `
+                    <div class="p-5">
+                        <div class="flex justify-between items-start">
+                            <p class="font-bold text-lg text-gray-800 truncate pr-2" title="${name}">${name}</p>
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${isCheckedIn ? 'bg-fuchsia-100 text-fuchsia-800' : 'bg-gray-100 text-gray-700'}">
+                                ${isCheckedIn ? '✓ Hadir' : '✗ Belum'}
+                            </span>
+                        </div>
+                        <div class="mt-3 text-sm text-gray-500">
+                            <p>Waktu Check-in:</p>
+                            <p class="font-medium text-gray-700">${time}</p>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-5 py-3">
+                        <button class="w-full text-sm font-semibold text-fuchsia-600 hover:text-fuchsia-800 transition" onclick="openEditModal('${id}')">
+                            Edit Tamu
+                        </button>
+                    </div>
+                `;
+                guestListContainer.appendChild(card);
+            });
+        }
+
+        /** Memperbarui statistik jumlah tamu */
+        function updateStats() {
+            const totalGuests = Object.keys(globalGuestData).length;
+            const checkedInCount = Object.values(globalGuestData).filter(g => g.checkedIn).length;
+            statsEl.innerHTML = `<span class="font-semibold text-fuchsia-600">${checkedInCount}</span> dari <span class="font-semibold">${totalGuests}</span> tamu telah check-in.`;
+        }
+
+        /** Memuat data tamu dari Firebase */
+        async function loadGuests() {
+            try {
+                loadingIndicator.style.display = 'block';
+                guestListContainer.innerHTML = '';
+                noResults.style.display = 'none';
+
+                const res = await fetch(`${API_BASE_URL}.json`);
+                if (!res.ok) throw new Error("Gagal mengambil data dari server.");
+                
+                const data = await res.json();
+                globalGuestData = data || {};
+                
+                renderGuests(globalGuestData);
+                updateStats();
+            } catch (error) {
+                loadingIndicator.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+                console.error("Error loading guests:", error);
+            }
+        }
+        
+        // --- Modal Handling ---
+        
+        function openModal() {
+            modal.classList.add('visible');
+            modal.querySelector('.modal-content').classList.add('visible');
+        }
+
+        function closeModal() {
+            modal.classList.remove('visible');
+            modal.querySelector('.modal-content').classList.remove('visible');
+            guestForm.reset();
+            editingGuestId = null;
+        }
+
+        window.openEditModal = (id) => {
+            editingGuestId = id;
+            const guest = globalGuestData[id];
+            
+            modalTitle.textContent = "Edit Detail Tamu";
+            guestNameInput.value = guest.name || '';
+            guestCheckedInInput.checked = guest.checkedIn || false;
+            
+            openModal();
+        }
+
+        function openAddModal() {
+            editingGuestId = null;
+            modalTitle.textContent = "Tambah Tamu Baru";
+            openModal();
+        }
+
+        // --- Data Manipulation ---
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            const name = guestNameInput.value.trim();
+            const newCheckedInStatus = guestCheckedInInput.checked;
+
+            if (!name) {
+                alert("Nama tamu tidak boleh kosong.");
+                return;
+            }
+
+            let url, method, body;
+
+            if (editingGuestId) { // --- Edit Mode ---
+                const originalGuest = globalGuestData[editingGuestId];
+                const updateData = { name };
+                
+                // Hanya update status & waktu jika ada perubahan
+                if (newCheckedInStatus !== originalGuest.checkedIn) {
+                    updateData.checkedIn = newCheckedInStatus;
+                    updateData.checkinTime = newCheckedInStatus ? new Date().toISOString() : null;
+                }
+
+                url = `${API_BASE_URL}/${editingGuestId}.json`;
+                method = "PATCH";
+                body = JSON.stringify(updateData);
+
+            } else { // --- Add Mode ---
+                const newGuestData = {
+                    name: name,
+                    checkedIn: newCheckedInStatus,
+                    checkinTime: newCheckedInStatus ? new Date().toISOString() : null
+                };
+
+                url = `${API_BASE_URL}.json`;
+                method = "POST";
+                body = JSON.stringify(newGuestData);
+            }
+
+            try {
+                const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body });
+                if (!res.ok) throw new Error("Gagal menyimpan data.");
+                
+                closeModal();
+                await loadGuests(); // Muat ulang data untuk menampilkan perubahan
+                searchInput.value = ''; // Reset pencarian setelah ada perubahan
+            } catch (error) {
+                alert(`Terjadi kesalahan: ${error.message}`);
+                console.error("Save error:", error);
+            }
+        }
+        
+        async function handleResetAll() {
+            if (!confirm("PERHATIAN: Anda akan mereset status check-in SEMUA tamu menjadi 'Belum Hadir'. Aksi ini tidak dapat dibatalkan. Lanjutkan?")) return;
+
+            // Optimasi: Gunakan satu PATCH request untuk mereset semua data
+            const updates = {};
+            Object.keys(globalGuestData).forEach(id => {
+                updates[`/${id}/checkedIn`] = false;
+                updates[`/${id}/checkinTime`] = null;
+            });
+
+            try {
+                const res = await fetch(`${API_BASE_URL}.json`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(updates)
+                });
+
+                if (!res.ok) throw new Error("Gagal mereset data.");
+                
+                await loadGuests();
+                alert("✅ Semua status check-in telah berhasil direset!");
+            } catch (error) {
+                alert(`Terjadi kesalahan saat mereset: ${error.message}`);
+                console.error("Reset error:", error);
+            }
+        }
+        
+        // --- Event Listeners ---
+        document.addEventListener("DOMContentLoaded", loadGuests);
+        
+        addGuestBtn.addEventListener("click", openAddModal);
+        resetAllBtn.addEventListener("click", handleResetAll);
+
+        cancelBtn.addEventListener("click", closeModal);
+        closeModalBtn.addEventListener("click", closeModal);
+        guestForm.addEventListener("submit", handleFormSubmit);
+
+        searchInput.addEventListener("input", (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredGuests = Object.fromEntries(
+                Object.entries(globalGuestData).filter(([id, guest]) => 
+                    (guest.name || '').toLowerCase().includes(searchTerm)
+                )
+            );
+            renderGuests(filteredGuests);
         });
-      });
-  }
 
-  function toggleCheckIn(id, currentStatus) {
-    const newStatus = !currentStatus;
-    const updateData = {
-      checkedIn: newStatus,
-      checkinTime: newStatus ? new Date().toISOString() : null
-    };
-
-    fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${id}.json`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updateData)
-    }).then(() => {
-      loadGuests();
-    });
-  }
-
-  document.getElementById("resetAllBtn").addEventListener("click", () => {
-    if (!confirm("Yakin ingin mereset semua check-in?")) return;
-
-    const promises = [];
-
-    Object.entries(guestData || {}).forEach(([id, guest]) => {
-      const name = guest.name || "(Tanpa Nama)";
-      const resetData = {
-        name: name, // <-- tambahkan ini agar tidak hilang saat reset
-        checkedIn: false,
-        checkinTime: null
-      };
-
-      promises.push(
-        fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${id}.json`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(resetData)
-        })
-      );
-    });
-
-    Promise.all(promises).then(() => {
-      loadGuests();
-      alert("✅ Semua status check-in telah direset!");
-    });
-  });
-
-  loadGuests();
-</script>
+        // Close modal when clicking outside of it
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+    </script>
 </body>
 </html>
