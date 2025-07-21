@@ -39,7 +39,7 @@
     const container = document.getElementById("qr-container");
     
     // Ganti URL bingkai dan Firebase sesuai kebutuhan Anda
-    const frameImageUrl = 'https://lh3.googleusercontent.com/d/1hGBGJidhSIYonvw_tJe1v72AgoimOV__=w1000'; 
+    const frameImageUrl = 'https://lh3.googleusercontent.com/d/1r5wTsriU03fe-2BYl4_bC5Wbe68Roulh=w1000'; 
     const firebaseDataUrl = "https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json";
 
     const frameImage = new Image();
@@ -52,7 +52,7 @@
 
       // --- PERUBAHAN DI SINI ---
       // Nilai padding kembali diperbesar untuk membuat QR code jauh lebih kecil.
-      const framePadding = 200; 
+      const framePadding = 250; 
 
       fetch(firebaseDataUrl)
         .then(res => res.json())
