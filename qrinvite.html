@@ -116,7 +116,7 @@
 
       // 4. Hitung ukuran QR code agar pas di dalam padding bingkai
       const availableSize = frameImage.width - (config.framePadding * 2);
-      const qrSize = Math.max(100, availableSize); // Pastikan ukuran tidak terlalu kecil
+      const qrSize = Math.max(60, availableSize); // Pastikan ukuran tidak terlalu kecil
 
       // 5. Buat kanvas sementara untuk QR code saja
       const qrCanvas = document.createElement("canvas");
