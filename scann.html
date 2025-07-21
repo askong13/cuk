@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QR Scanner - Hari Kebaya 2025</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <style>
+    /* Mengaplikasikan font Poppins sebagai default */
+    body {
+      font-family: 'Poppins', sans-serif;
+    }
+    /* Kustomisasi border area scan */
+    #reader__scan_region {
+        border-radius: 0.75rem; /* rounded-xl */
+        border: 4px dashed rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+
+<body class="bg-gray-900 text-gray-200 flex flex-col min-h-screen items-center justify-center p-4">
+
+  <div class="w-full max-w-md bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 space-y-6 transform transition-all">
+    
+    <div class="text-center space-y-4">
+      <img src="https://lh3.googleusercontent.com/-_G3X_i3O5IM/AAAAAAAAAAI/AAAAAAAAAAA/AFNEGgI3n4U/photo.jpg" alt="Logo Acara" class="mx-auto h-24 w-24 rounded-full border-4 border-[#FFC236] shadow-lg">
+      <h1 class="text-2xl font-bold text-white tracking-wide">Scanner Hari Kebaya</h1>
+      <p class="text-sm text-gray-400">Arahkan kamera ke QR Code tamu</p>
+    </div>
+
+    <div id="reader" class="w-full h-auto rounded-xl overflow-hidden"></div>
+
+    <div id="result" class="text-center min-h-[120px] flex items-center justify-center p-4 bg-gray-900 rounded-lg">
+      <span class="text-gray-500">Menunggu pemindaian...</span>
+    </div>
+
+    <button id="checkinBtn" class="hidden w-full bg-[#FFC236] text-gray-900 px-6 py-3 rounded-lg font-bold text-lg transition-all duration-300 ease-in-out hover:bg-yellow-500 transform hover:scale-105">
+      ✅ Konfirmasi Check-in
+    </button>
+  </div>
+  
+  <footer class="absolute bottom-4 text-center text-sm text-gray-500">
+    Partner with <a href="https://siskahandiska.com/" class="text-[#FFC236] font-semibold hover:underline" target="_blank">Siska Handiska Creative</a>
+  </footer>
+
+  <script>
+    const resultDiv = document.getElementById("result");
+    const checkinBtn = document.getElementById("checkinBtn");
+    let currentGuest = null;
+    let currentId = null;
+
+    // Spinner untuk loading
+    const loadingSpinner = `
+      <div class="flex flex-col items-center justify-center space-y-2">
+        <svg class="animate-spin h-8 w-8 text-[#FFC236]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-gray-400">Mencari data tamu...</span>
+      </div>`;
+
+    function onScanSuccess(decodedText) {
+      resultDiv.innerHTML = loadingSpinner;
+      currentGuest = null;
+      currentId = null;
+      checkinBtn.classList.add("hidden");
+
+      // Menambahkan try-catch untuk penanganan error jaringan
+      try {
+        fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
+          .then(res => {
+            if (!res.ok) {
+                throw new Error('Gagal mengambil data dari server.');
+            }
+            return res.json();
+          })
+          .then(data => {
+            for (const [id, guest] of Object.entries(data || {})) {
+              if (guest.name === decodedText) {
+                currentGuest = guest;
+                currentId = id;
+                break;
+              }
+            }
+
+            if (currentGuest) {
+              const statusClass = currentGuest.checkedIn ? "text-green-400" : "text-yellow-400";
+              const statusText = currentGuest.checkedIn ? "✅ Sudah Check-in" : "❌ Belum Check-in";
+              const time = currentGuest.checkinTime ? new Date(currentGuest.checkinTime).toLocaleString("id-ID", { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "-";
+
+              resultDiv.innerHTML = `
+                <div class="space-y-2 text-left w-full">
+                    <p class="text-lg"><strong>Nama:</strong> <span class="font-semibold text-white">${currentGuest.name}</span></p>
+                    <p><strong>Status:</strong> <span class="font-bold ${statusClass}">${statusText}</span></p>
+                    <p><strong>Waktu:</strong> <span class="text-gray-300">${time}</span></p>
+                </div>
+              `;
+
+              if (!currentGuest.checkedIn) {
+                checkinBtn.classList.remove("hidden");
+              }
+            } else {
+              resultDiv.innerHTML = `<span class="text-red-500 font-bold">🚫 Tamu tidak ditemukan: ${decodedText}</span>`;
+            }
+          })
+          .catch(error => {
+            console.error("Fetch error:", error);
+            resultDiv.innerHTML = `<span class="text-red-500 font-bold">⚠️ Terjadi kesalahan jaringan. Coba lagi.</span>`;
+          });
+      } catch (error) {
+        console.error("Global error:", error);
+        resultDiv.innerHTML = `<span class="text-red-500 font-bold">⚠️ Terjadi kesalahan. Muat ulang halaman.</span>`;
+      }
+    }
+
+    checkinBtn.addEventListener("click", () => {
+      if (!currentId) return;
+
+      checkinBtn.disabled = true;
+      checkinBtn.innerText = "Memproses...";
+
+      const now = new Date().toISOString();
+      fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${currentId}.json`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checkedIn: true, checkinTime: now })
+      })
+      .then(res => res.json())
+      .then(updatedGuest => {
+        const time = new Date(updatedGuest.checkinTime).toLocaleString("id-ID", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        resultDiv.innerHTML = `
+            <div class="space-y-2 text-left w-full">
+                <p class="text-lg"><strong>Nama:</strong> <span class="font-semibold text-white">${updatedGuest.name}</span></p>
+                <p><strong>Status:</strong> <span class="font-bold text-green-400">✅ Berhasil Check-in!</span></p>
+                <p><strong>Waktu:</strong> <span class="text-gray-300">${time}</span></p>
+            </div>
+        `;
+        checkinBtn.classList.add("hidden");
+        checkinBtn.disabled = false;
+        checkinBtn.innerHTML = `✅ Konfirmasi Check-in`;
+      })
+      .catch(error => {
+        console.error("Check-in error:", error);
+        resultDiv.innerHTML += `<p class="text-red-500 font-semibold mt-2">Gagal melakukan check-in. Coba lagi.</p>`;
+        checkinBtn.disabled = false;
+        checkinBtn.innerHTML = `✅ Konfirmasi Check-in`;
+      });
+    });
+
+    const html5QrcodeScanner = new Html5QrcodeScanner("reader", {
+      fps: 10,
+      qrbox: (_viewfinderWidth, viewfinderHeight) => {
+        // Membuat qrbox responsif dan berbentuk persegi
+        const minEdge = viewfinderHeight * 0.7;
+        return { width: minEdge, height: minEdge };
+      },
+      rememberLastUsedCamera: true,
+      supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+    }, false); // verbose mode: false
+
+    html5QrcodeScanner.render(onScanSuccess);
+
+  </script>
+</body>
+</html>
