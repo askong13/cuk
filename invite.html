@@ -39,7 +39,7 @@
     const container = document.getElementById("qr-container");
     
     // Ganti URL bingkai dan Firebase sesuai kebutuhan Anda
-    const frameImageUrl = 'https://lh3.googleusercontent.com/d/1hGBGJidhSIYonvw_tJe1v72AgoimOV__=w1000'; 
+    const frameImageUrl = 'https://lh3.googleusercontent.com/d/1r5wTsriU03fe-2BYl4_bC5Wbe68Roulh=w1000'; 
     const firebaseDataUrl = "https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json";
 
     const frameImage = new Image();
@@ -50,8 +50,7 @@
       // Kosongkan kontainer dari placeholder "Memuat..."
       container.innerHTML = ''; 
 
-      // Pengaturan jarak QR dari tepi bingkai
-      const framePadding = 85; 
+      const framePadding = 250; 
 
       fetch(firebaseDataUrl)
         .then(res => res.json())
@@ -93,10 +92,15 @@
               }
 
               const qrX = (frameImage.width - qrSize) / 2;
-              const qrY = (frameImage.height - qrSize) / 2;
+              // --- PERUBAHAN DI SINI ---
+              // Nilai Y dikurangi untuk menaikkan posisi QR code. Anda bisa mengubah angka 40 sesuai kebutuhan.
+              const qrY = ((frameImage.height - qrSize) / 2) - 40;
 
-              ctx.drawImage(qrCanvas, qrX, qrY);
+              // 1. Gambar bingkai terlebih dahulu sebagai latar belakang
               ctx.drawImage(frameImage, 0, 0, finalCanvas.width, finalCanvas.height);
+              
+              // 2. Kemudian, gambar QR code di atas bingkai
+              ctx.drawImage(qrCanvas, qrX, qrY);
               
               cardDiv.appendChild(finalCanvas);
 
