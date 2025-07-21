@@ -6,6 +6,7 @@
   <title>QR Code Semua Tamu</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     /* Menambahkan sedikit padding pada body agar kartu tidak menempel di tepi layar */
     body {
@@ -15,7 +16,13 @@
 </head>
 <body class="bg-gray-100">
 
-  <h1 class="text-2xl font-bold mb-6 text-center text-gray-900">QR Code Semua Tamu</h1>
+  <h1 class="text-2xl font-bold mb-4 text-center text-gray-900">QR Code Semua Tamu</h1>
+  
+  <div class="text-center mb-6">
+    <button id="download-all-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+      Memuat QR Codes...
+    </button>
+  </div>
 
   <div id="qr-container" class="flex flex-wrap -mx-2">
     <div class="w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 p-2">
@@ -35,20 +42,23 @@
   </footer>
 
   <script>
-    // Menargetkan kontainer utama
+    // Menargetkan elemen-elemen penting
     const container = document.getElementById("qr-container");
+    const downloadAllBtn = document.getElementById("download-all-btn");
     
     // Ganti URL bingkai dan Firebase sesuai kebutuhan Anda
     const frameImageUrl = 'https://lh3.googleusercontent.com/d/1r5wTsriU03fe-2BYl4_bC5Wbe68Roulh=w1000'; 
     const firebaseDataUrl = "https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json";
+
+    // Array untuk menyimpan data canvas dan nama tamu yang sudah jadi
+    const generatedQRCodes = [];
 
     const frameImage = new Image();
     frameImage.src = frameImageUrl;
     frameImage.crossOrigin = "Anonymous";
 
     frameImage.onload = function() {
-      // Kosongkan kontainer dari placeholder "Memuat..."
-      container.innerHTML = ''; 
+      container.innerHTML = ''; // Kosongkan kontainer dari placeholder
 
       const framePadding = 250; 
 
@@ -57,21 +67,31 @@
         .then(data => {
           if (!data) {
              container.innerHTML = '<p class="text-gray-500 text-center w-full">Tidak ada data tamu yang ditemukan.</p>';
+             downloadAllBtn.textContent = "Tidak ada data";
              return;
           }
-          Object.entries(data).forEach(([id, guest]) => {
-            // Buat div pembungkus luar untuk mengatur lebar dan padding
+
+          const guestEntries = Object.entries(data);
+          const totalGuests = guestEntries.length;
+          let processedGuests = 0;
+
+          if (totalGuests === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-center w-full">Tidak ada data tamu yang ditemukan.</p>';
+            downloadAllBtn.textContent = "Tidak ada data";
+            return;
+          }
+
+          guestEntries.forEach(([id, guest]) => {
             const wrapperDiv = document.createElement("div");
             wrapperDiv.className = "w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 p-2";
 
-            // Buat div kartu di dalamnya
             const cardDiv = document.createElement("div");
             cardDiv.className = "bg-white p-4 rounded-lg shadow-md text-center flex flex-col items-center h-full";
             
             const finalCanvas = document.createElement("canvas");
             finalCanvas.width = frameImage.width;
             finalCanvas.height = frameImage.height;
-            finalCanvas.className = "w-full h-auto"; // Membuat kanvas responsif
+            finalCanvas.className = "w-full h-auto";
             const ctx = finalCanvas.getContext("2d");
 
             const availableWidth = frameImage.width - (framePadding * 2);
@@ -79,27 +99,20 @@
             const qrSize = Math.min(availableWidth, availableHeight);
 
             const qrCanvas = document.createElement("canvas");
-            const qrOptions = {
-              width: qrSize,
-              errorCorrectionLevel: 'H',
-              margin: 1
-            };
+            const qrOptions = { width: qrSize, errorCorrectionLevel: 'H', margin: 1 };
             
             QRCode.toCanvas(qrCanvas, guest.name, qrOptions, function (error) {
               if (error) {
                 console.error(error);
+                // Tetap hitung agar proses tidak macet jika ada error
+                processedGuests++; 
                 return;
               }
 
               const qrX = (frameImage.width - qrSize) / 2;
-              // --- PERUBAHAN DI SINI ---
-              // Nilai Y dikurangi untuk menaikkan posisi QR code. Anda bisa mengubah angka 40 sesuai kebutuhan.
               const qrY = ((frameImage.height - qrSize) / 2) - 40;
 
-              // 1. Gambar bingkai terlebih dahulu sebagai latar belakang
               ctx.drawImage(frameImage, 0, 0, finalCanvas.width, finalCanvas.height);
-              
-              // 2. Kemudian, gambar QR code di atas bingkai
               ctx.drawImage(qrCanvas, qrX, qrY);
               
               cardDiv.appendChild(finalCanvas);
@@ -118,6 +131,16 @@
               
               wrapperDiv.appendChild(cardDiv);
               container.appendChild(wrapperDiv);
+
+              // Simpan hasil canvas dan nama untuk di-zip nanti
+              generatedQRCodes.push({ canvas: finalCanvas, name: guest.name });
+              
+              // Cek apakah semua QR code sudah diproses
+              processedGuests++;
+              if (processedGuests === totalGuests) {
+                downloadAllBtn.disabled = false;
+                downloadAllBtn.textContent = "⬇️ Download Semua (ZIP)";
+              }
             });
           });
         });
@@ -126,7 +149,45 @@
     frameImage.onerror = function() {
       console.error("Gagal memuat gambar bingkai. Periksa kembali URL gambar Anda.");
       container.innerHTML = '<p class="text-red-500 w-full text-center">Error: Gagal memuat gambar bingkai. Silakan periksa URL gambar pada kode.</p>';
+      downloadAllBtn.textContent = "Error Bingkai";
     };
+
+    // Event listener untuk tombol download semua
+    downloadAllBtn.addEventListener('click', function() {
+      this.disabled = true;
+      this.textContent = 'Mengompres file... ⏳';
+
+      const zip = new JSZip();
+
+      // Tambahkan setiap gambar ke dalam file zip
+      generatedQRCodes.forEach(item => {
+        // Ambil data gambar dari canvas dalam format base64
+        const imageData = item.canvas.toDataURL('image/png').split(',')[1];
+        // Tambahkan file ke zip
+        zip.file(`QR-${item.name}.png`, imageData, { base64: true });
+      });
+
+      // Generate file ZIP secara asynchronous
+      zip.generateAsync({ type: "blob" })
+        .then(function(content) {
+          // Buat URL sementara untuk blob ZIP
+          const url = URL.createObjectURL(content);
+          // Buat elemen link tersembunyi untuk memicu unduhan
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'Semua-QR-Code.zip';
+          document.body.appendChild(a);
+          a.click(); // Klik link untuk memulai unduhan
+          document.body.removeChild(a);
+          // Hapus URL sementara setelah selesai
+          URL.revokeObjectURL(url);
+        })
+        .finally(() => {
+          // Kembalikan kondisi tombol seperti semula
+          downloadAllBtn.disabled = false;
+          downloadAllBtn.textContent = '⬇️ Download Semua (ZIP)';
+        });
+    });
   </script>
 
 </body>
