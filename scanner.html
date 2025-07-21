@@ -1,94 +1,60 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Scanner Kehadiran</title>
+  <title>Scanner</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/dist/html5-qrcode.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
-<body class="bg-gray-100 text-gray-900 flex items-center justify-center min-h-screen p-4 font-sans">
+<body class="bg-gray-100 text-gray-900 flex flex-col min-h-screen">
 
-  <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full text-center">
-    <h1 class="text-2xl font-bold mb-2">Scanner Kehadiran</h1>
-    <p class="text-gray-500 mb-4">Hari Kebaya Nasional 2025</p>
+  <header class="bg-white shadow p-4 text-center font-bold text-xl">
+    QR Scanner - Hari Kebaya
+  </header>
 
-    <div id="reader" class="w-full mb-4"></div>
+  <main class="flex-grow p-6 flex flex-col items-center">
+    <div id="reader" style="width: 300px;"></div>
+    <div id="result" class="mt-4 text-lg font-semibold"></div>
+  </main>
 
-    <div id="result" class="min-h-[120px] bg-gray-50 p-4 rounded text-center text-sm text-gray-600">
-      📷 Siapkan kamera...
-    </div>
-  </div>
+  <footer class="bg-white p-4 text-center text-sm text-gray-500">
+    Partner with <a href="https://siskahandiska.com/" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
+  </footer>
 
   <script>
-    // ✅ GANTI DENGAN KONFIGURASI FIREBASE MILIKMU
-    const firebaseConfig = {
-      apiKey: "GANTI_API_KEY_MU",
-      authDomain: "harikebaya-2025.firebaseapp.com",
-      databaseURL: "https://harikebaya-2025-default-rtdb.firebaseio.com",
-      projectId: "harikebaya-2025",
-      storageBucket: "harikebaya-2025.appspot.com",
-      messagingSenderId: "GANTI_SENDER_ID",
-      appId: "GANTI_APP_ID"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
     const resultDiv = document.getElementById("result");
-    let lastScannedCode = null;
 
-    function showResult(text, color = 'green') {
-      resultDiv.innerHTML = `<p class="text-${color}-600 font-semibold text-lg">${text}</p>`;
-    }
+    function onScanSuccess(decodedText) {
+      resultDiv.innerHTML = "Memproses check-in...";
 
-    function onScanSuccess(code) {
-      if (code === lastScannedCode) return;
-      lastScannedCode = code;
-
-      const guestRef = db.ref("/" + code);
-
-      guestRef.once("value")
-        .then(snapshot => {
-          if (!snapshot.exists()) {
-            showResult("❌ QR tidak terdaftar di database.", "red");
-            return;
+      fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
+        .then(res => res.json())
+        .then(data => {
+          let foundId = null;
+          for (const [id, guest] of Object.entries(data || {})) {
+            if (guest.name === decodedText) {
+              foundId = id;
+              break;
+            }
           }
 
-          const data = snapshot.val();
-          if (data.checkedIn) {
-            showResult(`👋 ${data.name} sudah check-in sebelumnya.`, "yellow");
+          if (foundId) {
+            fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${foundId}.json`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ checkedIn: true })
+            }).then(() => {
+              resultDiv.innerHTML = `<span class="text-green-600">Check-in berhasil untuk ${decodedText}!</span>`;
+            });
           } else {
-            guestRef.update({ checkedIn: true });
-            showResult(`✅ Selamat datang, ${data.name}! Check-in berhasil.`, "green");
+            resultDiv.innerHTML = `<span class="text-red-600">Tamu tidak ditemukan: ${decodedText}</span>`;
           }
-        })
-        .catch(error => {
-          console.error(error);
-          showResult("❌ Gagal mengakses database.", "red");
         });
     }
 
-    function onScanFailure(err) {
-      console.warn(err);
-    }
-
-    function startScanner() {
-      const scanner = new Html5Qrcode("reader");
-      Html5Qrcode.getCameras().then(cameras => {
-        if (cameras.length) {
-          scanner.start(cameras[0].id, { fps: 10, qrbox: 250 }, onScanSuccess, onScanFailure);
-        } else {
-          showResult("❌ Tidak ada kamera ditemukan.", "red");
-        }
-      }).catch(err => {
-        showResult("❌ Gagal membuka kamera: " + err.message, "red");
-      });
-    }
-
-    window.onload = startScanner;
+    const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+    html5QrcodeScanner.render(onScanSuccess);
   </script>
 </body>
 </html>
