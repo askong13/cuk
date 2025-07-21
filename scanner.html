@@ -7,9 +7,8 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    /* Menambahkan sedikit style tambahan untuk tampilan yang lebih baik */
     #reader__scan_region {
-      border-radius: 0.75rem; /* Membuat sudut pemindai lebih melengkung */
+      border-radius: 0.75rem;
     }
     .notification-card {
       transition: all 0.3s ease-in-out;
@@ -42,52 +41,39 @@
   <script>
     const resultDiv = document.getElementById("result");
 
-    // Fungsi untuk memainkan suara notifikasi sederhana
     function playSound(type) {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
-
       oscillator.connect(gainNode);
       gainNode.connect(audioCtx.destination);
-      
       gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01); // Volume
-
+      gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
       if (type === 'success') {
         oscillator.type = 'sine';
         oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
       } else if (type === 'warning') {
         oscillator.type = 'triangle';
         oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-      } else { // error
+      } else {
         oscillator.type = 'square';
         oscillator.frequency.setValueAtTime(220, audioCtx.currentTime);
       }
-
       oscillator.start();
       gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
       oscillator.stop(audioCtx.currentTime + 0.3);
     }
 
-    // Fungsi utama yang dijalankan saat scan berhasil
     function onScanSuccess(decodedText, decodedResult) {
-      // Menampilkan status proses
       resultDiv.innerHTML = `<p class="text-blue-600 animate-pulse">Memvalidasi E-Invitation...</p>`;
-
-      // Mengambil data dari Firebase
       fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
         .then(res => {
-          if (!res.ok) {
-            throw new Error('Gagal mengambil data dari server.');
-          }
+          if (!res.ok) throw new Error('Gagal mengambil data dari server.');
           return res.json();
         })
         .then(data => {
           let guestId = null;
           let guestData = null;
-
-          // Mencari tamu berdasarkan nama (decodedText)
           for (const [id, guest] of Object.entries(data || {})) {
             if (guest.name === decodedText) {
               guestId = id;
@@ -95,9 +81,7 @@
               break;
             }
           }
-
           if (guestId && guestData) {
-            // -- LOGIKA BARU: Cek apakah tamu sudah check-in --
             if (guestData.checkedIn) {
               playSound('warning');
               resultDiv.innerHTML = `
@@ -106,7 +90,6 @@
                   <p>E-Invitation untuk <strong>${decodedText}</strong> sudah di-scan sebelumnya.</p>
                 </div>`;
             } else {
-              // Jika belum, lakukan proses check-in
               fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${guestId}.json`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -121,7 +104,6 @@
               });
             }
           } else {
-            // Jika tamu tidak ditemukan
             playSound('error');
             resultDiv.innerHTML = `
               <div class="notification-card bg-red-100 border-l-4 border-red-500 text-red-800 p-4 w-full rounded-lg" role="alert">
@@ -141,15 +123,16 @@
     }
 
     function onScanFailure(error) {
-      // Fungsi ini bisa dibiarkan kosong agar tidak menampilkan log error yang mengganggu di console
+      // Fungsi ini bisa dibiarkan kosong
     }
 
+    // --- PERUBAHAN DI SINI ---
     const html5QrcodeScanner = new Html5QrcodeScanner(
       "reader",
       { 
         fps: 10, 
         qrbox: { width: 250, height: 250 },
-        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+        facingMode: "environment" // Langsung meminta kamera belakang
       },
       /* verbose= */ false
     );
