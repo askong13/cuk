@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pesona Kebaya Nusantara</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/feather-icons"></script>
+  <style>
+    body {
+      background-color: #FFC236;
+      font-family: 'Poppins', sans-serif;
+    }
+    .menu-card {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .menu-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+    }
+    .menu-icon {
+      background: #F59E0B;
+      color: white;
+      padding: 12px;
+      border-radius: 50%;
+      margin-bottom: 12px;
+    }
+    .menu-title {
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen items-center justify-center text-gray-800 px-4">
+
+  <div class="text-center mb-12">
+    <h1 class="text-4xl md:text-5xl font-extrabold text-white drop-shadow-sm mb-2">Pesona Kebaya Nusantara</h1>
+    <p class="text-lg text-white opacity-90 font-medium">Satu Benang, Seribu Cerita</p>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-5xl">
+
+    <!-- Admin -->
+    <a href="admin.html" class="menu-card flex flex-col items-center text-center">
+      <div class="menu-icon"><i data-feather="shield"></i></div>
+      <span class="menu-title">Admin</span>
+    </a>
+
+    <!-- Input Data -->
+    <a href="input.html" class="menu-card flex flex-col items-center text-center">
+      <div class="menu-icon"><i data-feather="edit-3"></i></div>
+      <span class="menu-title">Input Data</span>
+    </a>
+
+    <!-- Scanner -->
+    <a href="scanner.html" class="menu-card flex flex-col items-center text-center">
+      <div class="menu-icon"><i data-feather="camera"></i></div>
+      <span class="menu-title">Scanner</span>
+    </a>
+
+    <!-- Data Tamu -->
+    <a href="data.html" class="menu-card flex flex-col items-center text-center">
+      <div class="menu-icon"><i data-feather="users"></i></div>
+      <span class="menu-title">Data Tamu</span>
+    </a>
+
+    <!-- Semua QR -->
+    <a href="all-qr.html" class="menu-card flex flex-col items-center text-center">
+      <div class="menu-icon"><i data-feather="grid"></i></div>
+      <span class="menu-title">Semua QR</span>
+    </a>
+
+  </div>
+
+  <footer class="mt-16 text-white text-sm text-center">
+    Partner with <a href="https://siskahandiska.com" class="underline font-semibold" target="_blank">Siska Handiska Creative</a>
+  </footer>
+
+  <script>
+    feather.replace();
+  </script>
+</body>
+</html>
