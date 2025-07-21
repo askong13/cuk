@@ -6,50 +6,56 @@
   <title>QR Scanner - Hari Kebaya 2025</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
-  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-  
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
   <style>
-    /* Mengaplikasikan font Poppins sebagai default */
     body {
       font-family: 'Poppins', sans-serif;
       background-color: #FFC236;
     }
-    /* Kustomisasi border area scan */
     #reader__scan_region {
-        border-radius: 0.75rem; /* rounded-xl */
-        border: 4px dashed rgba(0, 0, 0, 0.2);
+      border-radius: 0.75rem;
+      border: 4px dashed rgba(0, 0, 0, 0.2);
     }
   </style>
 </head>
 
 <body class="text-gray-800 flex flex-col min-h-screen items-center justify-center p-4">
 
-  <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 md:p-8 space-y-6 transform transition-all">
-    
-    <div class="text-center space-y-4">
-      <img src="https://via.placeholder.com/150/F3F4F6/374151?text=Ganti+Logo" alt="Logo Acara" class="mx-auto h-24 w-24 rounded-full border-4 border-gray-800 shadow-lg">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
+    <div class="text-center space-y-2">
       <h1 class="text-2xl font-bold text-gray-900 tracking-wide">Scanner Hari Kebaya</h1>
       <p class="text-sm text-gray-500">Arahkan kamera ke QR Code tamu</p>
     </div>
-
     <div id="reader" class="w-full h-auto rounded-xl overflow-hidden bg-gray-100"></div>
-
-    <div id="result" class="text-center min-h-[120px] flex items-center justify-center p-4 bg-gray-100 rounded-lg">
-      <span class="text-gray-500">Arahkan kamera untuk memulai</span>
+    <div class="text-center text-gray-500 pt-2">
+        Menunggu pemindaian...
     </div>
+  </div>
 
-    <div class="space-y-3">
-        <button id="checkinBtn" class="hidden w-full bg-gray-800 text-white px-6 py-3 rounded-lg font-bold text-lg transition-all duration-300 ease-in-out hover:bg-gray-700 transform hover:scale-105">
-        ✅ Konfirmasi Check-in
+  <div id="modalOverlay" class="hidden fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div id="modalContent" class="bg-white w-full max-w-sm rounded-2xl shadow-xl p-6 space-y-5 transform transition-all scale-95 opacity-0">
+      
+      <div class="text-center space-y-3">
+        <img src="https://via.placeholder.com/150/FBBF24/374151?text=Ganti+Logo" alt="Logo Acara" class="mx-auto h-20 w-20 rounded-full border-4 border-[#FFC236] shadow-lg">
+        <h2 class="text-xl font-bold text-gray-800">Detail Tamu</h2>
+      </div>
+
+      <div id="guestInfo" class="space-y-2 border-t border-b border-gray-200 py-4">
+          </div>
+      
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button id="modalCheckinBtn" class="hidden w-full bg-[#FFC236] text-gray-900 px-5 py-3 rounded-lg font-bold transition hover:bg-yellow-500">
+          ✅ Konfirmasi Check-in
         </button>
-        <button id="rescanBtn" class="hidden w-full bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 ease-in-out hover:bg-gray-500">
-        🔄 Pindai Lagi
+        <button id="modalRescanBtn" class="w-full bg-gray-200 text-gray-700 px-5 py-3 rounded-lg font-semibold transition hover:bg-gray-300">
+          Tutup & Pindai Lagi
         </button>
+      </div>
+
     </div>
   </div>
   
@@ -58,39 +64,49 @@
   </footer>
 
   <script>
-    const resultDiv = document.getElementById("result");
-    const checkinBtn = document.getElementById("checkinBtn");
-    const rescanBtn = document.getElementById("rescanBtn");
-    const readerDiv = document.getElementById("reader");
+    // Elemen Modal
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalContent = document.getElementById('modalContent');
+    const guestInfoDiv = document.getElementById('guestInfo');
+    const modalCheckinBtn = document.getElementById('modalCheckinBtn');
+    const modalRescanBtn = document.getElementById('modalRescanBtn');
 
     let currentGuest = null;
     let currentId = null;
 
-    // Spinner untuk loading
-    const loadingSpinner = `
-      <div class="flex flex-col items-center justify-center space-y-2">
-        <svg class="animate-spin h-8 w-8 text-gray-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <span class="text-gray-500">Mencari data tamu...</span>
-      </div>`;
-
     const html5QrcodeScanner = new Html5QrcodeScanner("reader", {
       fps: 10,
       qrbox: (w, h) => ({ width: w * 0.8, height: w * 0.8 }),
-      rememberLastUsedCamera: true,
-      supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-    }, false); 
+      rememberLastUsedCamera: true
+    }, false);
+
+    function showModal() {
+        modalOverlay.classList.remove('hidden');
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+        }, 10); // delay kecil untuk memulai transisi
+    }
+
+    function hideModal() {
+        modalContent.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            modalOverlay.classList.add('hidden');
+            // Lanjutkan pemindaian setelah modal tertutup
+            if (html5QrcodeScanner.getState() === Html5QrcodeScannerState.PAUSED) {
+                html5QrcodeScanner.resume();
+            }
+        }, 200); // Sesuaikan dengan durasi transisi
+    }
+    
+    // Event listener untuk menutup modal
+    modalRescanBtn.addEventListener('click', hideModal);
 
     function onScanSuccess(decodedText) {
-      // 1. Langsung hentikan scanner agar tidak memindai terus-menerus
-      html5QrcodeScanner.pause(true); // 'true' = pause decoding but keep camera on
+      html5QrcodeScanner.pause(true); // Jeda pemindai
       
-      resultDiv.innerHTML = loadingSpinner;
-      currentGuest = null;
-      currentId = null;
-      checkinBtn.classList.add("hidden");
+      guestInfoDiv.innerHTML = `<p class="text-center text-gray-500">Mencari data...</p>`;
+      modalCheckinBtn.classList.add('hidden');
+      showModal();
 
       fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
         .then(res => res.ok ? res.json() : Promise.reject('Gagal mengambil data'))
@@ -106,75 +122,52 @@
           if (currentGuest) {
             const statusClass = currentGuest.checkedIn ? "text-green-600" : "text-blue-600";
             const statusText = currentGuest.checkedIn ? "✅ Sudah Check-in" : "❌ Belum Check-in";
-            const time = currentGuest.checkinTime ? new Date(currentGuest.checkinTime).toLocaleString("id-ID", { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "-";
+            const time = currentGuest.checkinTime ? new Date(currentGuest.checkinTime).toLocaleString("id-ID", { hour: '2-digit', minute: '2-digit' }) : "-";
 
-            resultDiv.innerHTML = `
-              <div class="space-y-2 text-left w-full">
-                  <p class="text-lg"><strong>Nama:</strong> <span class="font-semibold text-gray-900">${currentGuest.name}</span></p>
-                  <p><strong>Status:</strong> <span class="font-bold ${statusClass}">${statusText}</span></p>
-                  <p><strong>Waktu:</strong> <span class="text-gray-600">${time}</span></p>
-              </div>
+            guestInfoDiv.innerHTML = `
+              <p><strong>Nama:</strong> <span class="font-semibold text-gray-900">${currentGuest.name}</span></p>
+              <p><strong>Status:</strong> <span class="font-bold ${statusClass}">${statusText}</span></p>
+              <p><strong>Waktu:</strong> <span class="text-gray-600">${time}</span></p>
             `;
-
             if (!currentGuest.checkedIn) {
-              checkinBtn.classList.remove("hidden");
+              modalCheckinBtn.classList.remove('hidden');
             }
           } else {
-            resultDiv.innerHTML = `<span class="text-red-600 font-bold">🚫 Tamu tidak ditemukan: ${decodedText}</span>`;
+            guestInfoDiv.innerHTML = `<p class="text-center text-red-600 font-bold">🚫 Tamu tidak ditemukan: ${decodedText}</p>`;
           }
-
-          // 2. Tampilkan tombol "Pindai Lagi" setelah hasil muncul
-          rescanBtn.classList.remove("hidden");
         })
         .catch(error => {
-          console.error("Fetch error:", error);
-          resultDiv.innerHTML = `<span class="text-red-600 font-bold">⚠️ Terjadi kesalahan jaringan. Coba lagi.</span>`;
-          rescanBtn.classList.remove("hidden"); // Tampilkan juga jika error
+          guestInfoDiv.innerHTML = `<p class="text-center text-red-600 font-bold">⚠️ Terjadi kesalahan jaringan.</p>`;
         });
     }
-
-    checkinBtn.addEventListener("click", () => {
+    
+    modalCheckinBtn.addEventListener('click', () => {
       if (!currentId) return;
 
-      checkinBtn.disabled = true;
-      checkinBtn.innerText = "Memproses...";
+      modalCheckinBtn.disabled = true;
+      modalCheckinBtn.innerText = "Memproses...";
 
-      const now = new Date().toISOString();
       fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${currentId}.json`, {
         method: "PATCH",
-        body: JSON.stringify({ checkedIn: true, checkinTime: now })
+        body: JSON.stringify({ checkedIn: true, checkinTime: new Date().toISOString() })
       })
       .then(res => res.json())
       .then(updatedGuest => {
-        const time = new Date(updatedGuest.checkinTime).toLocaleString("id-ID", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        resultDiv.innerHTML = `
-            <div class="space-y-2 text-left w-full">
-                <p class="text-lg"><strong>Nama:</strong> <span class="font-semibold text-gray-900">${updatedGuest.name}</span></p>
-                <p><strong>Status:</strong> <span class="font-bold text-green-600">✅ Berhasil Check-in!</span></p>
-                <p><strong>Waktu:</strong> <span class="text-gray-600">${time}</span></p>
-            </div>
+        const time = new Date(updatedGuest.checkinTime).toLocaleString("id-ID", { hour: '2-digit', minute: '2-digit' });
+        guestInfoDiv.innerHTML = `
+            <p><strong>Nama:</strong> <span class="font-semibold text-gray-900">${updatedGuest.name}</span></p>
+            <p class="font-bold text-green-600 text-lg">✅ Berhasil Check-in!</p>
+            <p><strong>Waktu:</strong> <span class="text-gray-600">${time}</span></p>
         `;
-        checkinBtn.classList.add("hidden"); // Sembunyikan tombol checkin setelah berhasil
+        modalCheckinBtn.classList.add('hidden'); // Sembunyikan tombol setelah berhasil
       })
       .catch(error => {
-        resultDiv.innerHTML += `<p class="text-red-600 font-semibold mt-2">Gagal check-in. Coba lagi.</p>`;
+         guestInfoDiv.innerHTML += `<p class="text-red-500 font-semibold mt-2">Gagal check-in.</p>`;
       })
       .finally(() => {
-        checkinBtn.disabled = false;
-        checkinBtn.innerHTML = `✅ Konfirmasi Check-in`;
+        modalCheckinBtn.disabled = false;
+        modalCheckinBtn.innerHTML = `✅ Konfirmasi Check-in`;
       });
-    });
-
-    // 3. Event listener untuk tombol "Pindai Lagi"
-    rescanBtn.addEventListener("click", () => {
-        resultDiv.innerHTML = `<span class="text-gray-500">Arahkan kamera untuk memulai</span>`;
-        rescanBtn.classList.add("hidden");
-        checkinBtn.classList.add("hidden");
-
-        // Pastikan kamera tidak error sebelum melanjutkan
-        if (html5QrcodeScanner.getState() === Html5QrcodeScannerState.PAUSED) {
-            html5QrcodeScanner.resume();
-        }
     });
 
     html5QrcodeScanner.render(onScanSuccess);
