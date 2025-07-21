@@ -66,77 +66,84 @@
     Partner with <a href="https://siskahandiska.com/" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
   </footer>
 
-  <script>
-    const tbody = document.getElementById("guest-list");
-    let guestData = {}; // disimpan global agar bisa dipakai untuk reset
+<!-- 🟡 HANYA BAGIAN SCRIPT DI BAWAH SAJA YANG DIREVISI -->
 
-    function loadGuests() {
-      tbody.innerHTML = '';
-      fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
-        .then(res => res.json())
-        .then(data => {
-          guestData = data || {};
-          Object.entries(guestData).forEach(([id, guest]) => {
-            const checkedIn = guest.checkedIn ? '✅' : '❌';
-            const time = guest.checkinTime
-              ? new Date(guest.checkinTime).toLocaleString("id-ID")
-              : '-';
-            const row = document.createElement("tr");
-            row.className = "hover:bg-yellow-50";
-            row.innerHTML = `
-              <td class="p-3 font-medium">${guest.name}</td>
-              <td class="p-3 text-center">${checkedIn}</td>
-              <td class="p-3 text-center">${time}</td>
-              <td class="p-3 text-center">
-                <button class="btn btn-edit" onclick="toggleCheckIn('${id}', ${guest.checkedIn})">✏️ Edit</button>
-              </td>
-            `;
-            tbody.appendChild(row);
-          });
+<script>
+  const tbody = document.getElementById("guest-list");
+  let guestData = {}; // disimpan global agar bisa dipakai untuk reset
+
+  function loadGuests() {
+    tbody.innerHTML = '';
+    fetch("https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json")
+      .then(res => res.json())
+      .then(data => {
+        guestData = data || {};
+        Object.entries(guestData).forEach(([id, guest]) => {
+          const name = guest.name || '(Tanpa Nama)';
+          const checkedIn = guest.checkedIn ? '✅' : '❌';
+          const time = guest.checkinTime
+            ? new Date(guest.checkinTime).toLocaleString("id-ID")
+            : '-';
+          const row = document.createElement("tr");
+          row.className = "hover:bg-yellow-50";
+          row.innerHTML = `
+            <td class="p-3 font-medium">${name}</td>
+            <td class="p-3 text-center">${checkedIn}</td>
+            <td class="p-3 text-center">${time}</td>
+            <td class="p-3 text-center">
+              <button class="btn btn-edit" onclick="toggleCheckIn('${id}', ${guest.checkedIn})">✏️ Edit</button>
+            </td>
+          `;
+          tbody.appendChild(row);
         });
-    }
+      });
+  }
 
-    function toggleCheckIn(id, currentStatus) {
-      const newStatus = !currentStatus;
-      const updateData = {
-        checkedIn: newStatus,
-        checkinTime: newStatus ? new Date().toISOString() : null
+  function toggleCheckIn(id, currentStatus) {
+    const newStatus = !currentStatus;
+    const updateData = {
+      checkedIn: newStatus,
+      checkinTime: newStatus ? new Date().toISOString() : null
+    };
+
+    fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${id}.json`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updateData)
+    }).then(() => {
+      loadGuests();
+    });
+  }
+
+  document.getElementById("resetAllBtn").addEventListener("click", () => {
+    if (!confirm("Yakin ingin mereset semua check-in?")) return;
+
+    const promises = [];
+
+    Object.entries(guestData || {}).forEach(([id, guest]) => {
+      const name = guest.name || "(Tanpa Nama)";
+      const resetData = {
+        name: name, // <-- tambahkan ini agar tidak hilang saat reset
+        checkedIn: false,
+        checkinTime: null
       };
 
-      fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${id}.json`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updateData)
-      }).then(() => {
-        loadGuests();
-      });
-    }
-
-    document.getElementById("resetAllBtn").addEventListener("click", () => {
-      if (!confirm("Yakin ingin mereset semua check-in?")) return;
-
-      const promises = [];
-
-      Object.entries(guestData || {}).forEach(([id, guest]) => {
-        promises.push(
-          fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${id}.json`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              checkedIn: false,
-              checkinTime: null
-            })
-          })
-        );
-      });
-
-      Promise.all(promises).then(() => {
-        loadGuests();
-        alert("✅ Semua status check-in telah direset!");
-      });
+      promises.push(
+        fetch(`https://harikebaya-2025-default-rtdb.firebaseio.com/guests/${id}.json`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(resetData)
+        })
+      );
     });
 
-    loadGuests();
-  </script>
+    Promise.all(promises).then(() => {
+      loadGuests();
+      alert("✅ Semua status check-in telah direset!");
+    });
+  });
+
+  loadGuests();
+</script>
 </body>
 </html>
