@@ -1,0 +1,389 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guest Check-In - Hari Kebaya 2025</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Poppins', sans-serif; background-color: #f7fafc; }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.toggle-checkbox:checked ~ .toggle-dot { transform: translateX(100%); background-color: #FFC236; }
+.toggle-checkbox:checked + .toggle-bg { background-color: #FEF3C7; } /* yellow-100 /
+.modal { transition: opacity 0.3s ease, visibility 0.3s ease; }
+.modal-content { transition: transform 0.3s ease; }
+.modal.visible { visibility: visible; opacity: 1; }
+.modal.visible .modal-content { transform: scale(1); }
+/ Style untuk tombol filter */
+.filter-btn.active { background-color: #FFC236; color: black; font-weight: 700; }
+.filter-btn.inactive { background-color: #e5e7eb; color: #374151; }
+.filter-btn.inactive:hover { background-color: #d1d5db; }
+</style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+<header class="bg-white shadow-md sticky top-0 z-20">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Daftar Tamu Hari Kebaya 2025</h1>
+        <div id="stats" class="text-gray-600 mt-1 text-sm md:text-base">Memuat data statistik...</div>
+    </div>
+</header>
+
+<main class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 items-center">
+        <div class="relative">
+            <input type="text" id="search-input" placeholder="Cari nama tamu..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 shadow-sm">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                 <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3 md:justify-end">
+            <button id="exportBtn" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2 shadow-md">
+                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M14.5,2H5.5C4.67,2,4,2.67,4,3.5v13C4,17.33,4.67,18,5.5,18h9c0.83,0,1.5-0.67,1.5-1.5v-13C16,2.67,15.33,2,14.5,2z M11,10.5h1.5v3H11V10.5z M7.5,10.5h1.5v3H7.5V10.5z M12.25,5h-4.5V4h4.5V5z"/></svg>
+                <span>Export Excel</span>
+            </button>
+            <button id="addGuestBtn" class="w-full sm:w-auto bg-[#FFC236] hover:bg-[#E0A82E] text-black font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2 shadow-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                <span>Tambah Tamu</span>
+            </button>
+            <button id="resetAllBtn" class="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2 shadow-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M4 4l16 16"></path></svg>
+                <span>Reset Check-in</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 mb-6 p-3 bg-gray-50 rounded-lg">
+        <span class="font-semibold text-sm text-gray-600">Filter:</span>
+        <div id="filter-controls" class="flex flex-wrap gap-2">
+            <button data-filter="all" class="filter-btn active px-4 py-1.5 text-sm font-semibold rounded-full transition">Semua Tamu</button>
+            <button data-filter="checkedIn" class="filter-btn inactive px-4 py-1.5 text-sm font-semibold rounded-full transition">Sudah Check-in</button>
+            <button data-filter="notCheckedIn" class="filter-btn inactive px-4 py-1.5 text-sm font-semibold rounded-full transition">Belum Check-in</button>
+        </div>
+    </div>
+
+    <div id="loading-indicator" class="text-center py-10"><p class="text-gray-500 text-lg">Memuat daftar tamu...</p></div>
+    <div id="guest-list-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+    <div id="no-results" class="hidden text-center py-10"><p class="text-gray-500 text-lg">Tamu tidak ditemukan.</p></div>
+</main>
+
+<div id="guest-modal" class="modal fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 invisible opacity-0">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-md p-6 transform scale-95">
+        <div class="flex justify-between items-center mb-4">
+            <h2 id="modal-title" class="text-2xl font-bold"></h2>
+            <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">&times;</button>
+        </div>
+        <form id="guest-form" novalidate>
+            <div class="mb-5">
+                <label for="guest-name" class="block text-gray-700 font-medium mb-2">Nama Tamu</label>
+                <input type="text" id="guest-name" name="name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
+            </div>
+            <div class="mb-5">
+                <label class="flex items-center justify-between cursor-pointer">
+                    <span class="text-gray-700 font-medium">Status Check-In</span>
+                    <div class="relative">
+                        <input type="checkbox" id="guest-checkedIn" class="toggle-checkbox sr-only">
+                        <div class="toggle-bg block bg-gray-200 w-14 h-8 rounded-full transition"></div>
+                        <div class="toggle-dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform"></div>
+                    </div>
+                </label>
+            </div>
+            
+            <div class="flex justify-between items-center mt-8">
+                <button type="button" id="deleteGuestBtn" class="text-red-600 hover:text-red-800 font-semibold transition">
+                    Hapus Tamu
+                </button>
+                <div class="flex gap-3">
+                    <button type="button" id="cancelBtn" class="px-5 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">Batal</button>
+                    <button type="submit" class="px-5 py-2 bg-[#FFC236] text-black rounded-lg hover:bg-[#E0A82E] transition shadow-md font-semibold">Simpan</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = "[https://harikebaya-2025-default-rtdb.firebaseio.com/guests](https://harikebaya-2025-default-rtdb.firebaseio.com/guests)";
+
+    // --- DOM Elements ---
+    const guestListContainer = document.getElementById("guest-list-container");
+    const loadingIndicator = document.getElementById("loading-indicator");
+    const noResults = document.getElementById("no-results");
+    const statsEl = document.getElementById("stats");
+    const searchInput = document.getElementById("search-input");
+    const modal = document.getElementById("guest-modal");
+    const modalTitle = document.getElementById("modal-title");
+    const guestForm = document.getElementById("guest-form");
+    const guestNameInput = document.getElementById("guest-name");
+    const guestCheckedInInput = document.getElementById("guest-checkedIn");
+    const addGuestBtn = document.getElementById("addGuestBtn");
+    const resetAllBtn = document.getElementById("resetAllBtn");
+    const cancelBtn = document.getElementById("cancelBtn");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const deleteGuestBtn = document.getElementById("deleteGuestBtn");
+    const filterControls = document.getElementById("filter-controls");
+    const exportBtn = document.getElementById("exportBtn");
+
+    // --- State ---
+    let globalGuestData = {};
+    let editingGuestId = null;
+    let currentFilter = 'all'; // 'all', 'checkedIn', 'notCheckedIn'
+
+    // --- Functions ---
+    function applyFiltersAndSearch() {
+        const searchTerm = searchInput.value.toLowerCase();
+        let filteredByStatus = {};
+
+        if (currentFilter === 'checkedIn') {
+            filteredByStatus = Object.fromEntries(
+                Object.entries(globalGuestData).filter(([id, guest]) => guest.checkedIn)
+            );
+        } else if (currentFilter === 'notCheckedIn') {
+            filteredByStatus = Object.fromEntries(
+                Object.entries(globalGuestData).filter(([id, guest]) => !guest.checkedIn)
+            );
+        } else {
+            filteredByStatus = { ...globalGuestData };
+        }
+
+        const finalFilteredGuests = Object.fromEntries(
+            Object.entries(filteredByStatus).filter(([id, guest]) => (guest.name || '').toLowerCase().includes(searchTerm))
+        );
+        
+        renderGuests(finalFilteredGuests);
+        return finalFilteredGuests;
+    }
+
+    function renderGuests(guestsToRender) {
+        guestListContainer.innerHTML = '';
+        loadingIndicator.style.display = 'none';
+
+        const guestEntries = Object.entries(guestsToRender);
+        noResults.style.display = guestEntries.length === 0 ? 'block' : 'none';
+
+        guestEntries.forEach(([id, guest]) => {
+            const name = guest.name || '(Tanpa Nama)';
+            const isCheckedIn = guest.checkedIn;
+            const time = guest.checkinTime ? new Date(guest.checkinTime).toLocaleString("id-ID", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }) : '-';
+
+            const card = document.createElement("div");
+            card.className = `bg-white rounded-xl shadow-md overflow-hidden transform hover:-translate-y-1 transition-all duration-300 ${isCheckedIn ? 'border-l-4 border-yellow-500' : ''}`;
+            
+            card.innerHTML = `
+                <div class="p-5">
+                    <div class="flex justify-between items-start">
+                        <p class="font-bold text-lg text-gray-800 truncate pr-2" title="${name}">${name}</p>
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${isCheckedIn ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-700'}">
+                            ${isCheckedIn ? '✓ Hadir' : '✗ Belum'}
+                        </span>
+                    </div>
+                    <div class="mt-3 text-sm text-gray-500">
+                        <p>Waktu Check-in:</p>
+                        <p class="font-medium text-gray-700">${time}</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-5 py-3">
+                    <button class="w-full text-sm font-semibold text-yellow-600 hover:text-yellow-700 transition" onclick="openEditModal('${id}')">
+                        Edit Tamu
+                    </button>
+                </div>
+            `;
+            guestListContainer.appendChild(card);
+        });
+    }
+
+    function updateStats() {
+        const totalGuests = Object.keys(globalGuestData).length;
+        const checkedInCount = Object.values(globalGuestData).filter(g => g.checkedIn).length;
+        statsEl.innerHTML = `<span class="font-bold text-yellow-600">${checkedInCount}</span> dari <span class="font-semibold">${totalGuests}</span> tamu telah check-in.`;
+    }
+
+    async function loadGuests() {
+        try {
+            loadingIndicator.style.display = 'block';
+            guestListContainer.innerHTML = '';
+            noResults.style.display = 'none';
+            const res = await fetch(`${API_BASE_URL}.json`);
+            if (!res.ok) throw new Error("Gagal mengambil data dari server.");
+            const data = await res.json();
+            globalGuestData = data || {};
+            applyFiltersAndSearch();
+            updateStats();
+        } catch (error) {
+            loadingIndicator.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+            console.error("Error loading guests:", error);
+        }
+    }
+    
+    // --- Modal Handling ---
+    function openModal() {
+        modal.classList.add('visible');
+        modal.querySelector('.modal-content').classList.add('visible');
+    }
+
+    function closeModal() {
+        modal.classList.remove('visible');
+        modal.querySelector('.modal-content').classList.remove('visible');
+        guestForm.reset();
+        editingGuestId = null;
+    }
+
+    window.openEditModal = (id) => {
+        editingGuestId = id;
+        const guest = globalGuestData[id];
+        modalTitle.textContent = "Edit Detail Tamu";
+        guestNameInput.value = guest.name || '';
+        guestCheckedInInput.checked = guest.checkedIn || false;
+        deleteGuestBtn.style.display = 'block';
+        openModal();
+    }
+
+    function openAddModal() {
+        editingGuestId = null;
+        modalTitle.textContent = "Tambah Tamu Baru";
+        deleteGuestBtn.style.display = 'none';
+        openModal();
+    }
+
+    // --- Data Manipulation ---
+    async function handleFormSubmit(event) {
+        event.preventDefault();
+        const name = guestNameInput.value.trim();
+        if (!name) {
+            alert("Nama tamu tidak boleh kosong.");
+            return;
+        }
+
+        let url, method, body;
+        const newCheckedInStatus = guestCheckedInInput.checked;
+
+        if (editingGuestId) { // Edit Mode
+            const originalGuest = globalGuestData[editingGuestId];
+            const updateData = { name, checkedIn: originalGuest.checkedIn, checkinTime: originalGuest.checkinTime };
+            if (newCheckedInStatus !== originalGuest.checkedIn) {
+                updateData.checkedIn = newCheckedInStatus;
+                updateData.checkinTime = newCheckedInStatus ? new Date().toISOString() : null;
+            }
+            url = `${API_BASE_URL}/${editingGuestId}.json`;
+            method = "PATCH";
+            body = JSON.stringify(updateData);
+        } else { // Add Mode
+            const newGuestData = { name, checkedIn: newCheckedInStatus, checkinTime: newCheckedInStatus ? new Date().toISOString() : null };
+            url = `${API_BASE_URL}.json`;
+            method = "POST";
+            body = JSON.stringify(newGuestData);
+        }
+
+        try {
+            const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body });
+            if (!res.ok) throw new Error("Gagal menyimpan data.");
+            closeModal();
+            await loadGuests();
+            searchInput.value = '';
+        } catch (error) {
+            alert(`Terjadi kesalahan: ${error.message}`);
+        }
+    }
+    
+    async function handleResetAll() {
+        if (!confirm("PERHATIAN: Anda akan mereset status check-in SEMUA tamu. Lanjutkan?")) return;
+        const updates = {};
+        Object.keys(globalGuestData).forEach(id => {
+            updates[`/${id}/checkedIn`] = false;
+            updates[`/${id}/checkinTime`] = null;
+        });
+        try {
+            const res = await fetch(`${API_BASE_URL}.json`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
+            if (!res.ok) throw new Error("Gagal mereset data.");
+            await loadGuests();
+            alert("✅ Semua status check-in telah berhasil direset!");
+        } catch (error) {
+            alert(`Terjadi kesalahan saat mereset: ${error.message}`);
+        }
+    }
+    
+    async function handleDeleteGuest() {
+        if (!editingGuestId) return;
+
+        const guestName = globalGuestData[editingGuestId].name || "Tamu ini";
+        if (!confirm(`Apakah Anda yakin ingin menghapus "${guestName}"? Aksi ini tidak dapat dibatalkan.`)) {
+            return;
+        }
+
+        try {
+            const url = `${API_BASE_URL}/${editingGuestId}.json`;
+            const res = await fetch(url, { method: "DELETE" });
+            if (!res.ok) throw new Error("Gagal menghapus data tamu.");
+
+            alert('✅ Tamu berhasil dihapus.');
+            closeModal();
+            await loadGuests();
+            searchInput.value = '';
+        } catch (error) {
+            alert(`Terjadi kesalahan: ${error.message}`);
+        }
+    }
+
+    async function handleExportToExcel() {
+        const guestsToExport = applyFiltersAndSearch();
+        if (Object.keys(guestsToExport).length === 0) {
+            alert("Tidak ada data untuk diekspor pada filter ini.");
+            return;
+        }
+
+        const dataForSheet = Object.values(guestsToExport).map(guest => ({
+            "Nama Tamu": guest.name,
+            "Status": guest.checkedIn ? "Hadir" : "Belum Check-in",
+            "Waktu Check-in": guest.checkinTime ? new Date(guest.checkinTime).toLocaleString("id-ID") : "-"
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(dataForSheet);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Daftar Tamu");
+        
+        worksheet["!cols"] = [{ wch: 30 }, { wch: 15 }, { wch: 25 }]; // Set column widths
+
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}`;
+        XLSX.writeFile(workbook, `Daftar_Tamu_Hari_Kebaya_2025_${timestamp}.xlsx`);
+    }
+    
+    // --- Event Listeners ---
+    document.addEventListener("DOMContentLoaded", loadGuests);
+    addGuestBtn.addEventListener("click", openAddModal);
+    resetAllBtn.addEventListener("click", handleResetAll);
+    exportBtn.addEventListener("click", handleExportToExcel);
+    cancelBtn.addEventListener("click", closeModal);
+    closeModalBtn.addEventListener("click", closeModal);
+    guestForm.addEventListener("submit", handleFormSubmit);
+    deleteGuestBtn.addEventListener("click", handleDeleteGuest); 
+    searchInput.addEventListener("input", applyFiltersAndSearch);
+
+    filterControls.addEventListener("click", (e) => {
+        if (e.target.tagName === 'BUTTON') {
+            document.querySelectorAll('#filter-controls .filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.classList.add('inactive');
+            });
+            e.target.classList.add('active');
+            e.target.classList.remove('inactive');
+
+            currentFilter = e.target.dataset.filter;
+            applyFiltersAndSearch();
+        }
+    });
+
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeModal();
+    });
+</script>
+
+</body>
+</html>
