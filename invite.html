@@ -8,34 +8,32 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
-    body { padding: 1rem; }
-    /* Gaya untuk tombol paginasi aktif. Lebih menonjol */
-    .pagination-btn-active {
-      background-color: #1D4ED8; /* bg-blue-700 */
-      color: white;
-      border-color: #1D4ED8;
-      font-weight: bold;
+    /* Menambahkan sedikit padding pada body agar kartu tidak menempel di tepi layar */
+    body {
+      padding: 0.5rem;
     }
   </style>
 </head>
 <body class="bg-gray-100">
 
-  <h1 class="text-3xl font-bold mb-6 text-center text-gray-900">QR Code Semua Tamu</h1>
+  <h1 class="text-2xl font-bold mb-4 text-center text-gray-900">QR Code Semua Tamu</h1>
   
-  <div id="controls-container" class="text-center mb-6">
-    <button id="download-all-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors w-full sm:w-auto" disabled>
+  <div class="text-center mb-6">
+    <button id="download-all-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
       Memuat QR Codes...
     </button>
   </div>
-  
-  <div id="pagination-container" class="flex justify-center my-8">
-      <div id="pagination-controls" class="flex justify-center items-center flex-wrap gap-2">
-          </div>
-  </div>
 
   <div id="qr-container" class="flex flex-wrap -mx-2">
-    <div class="w-full text-center p-4">
-      <p class="text-lg text-gray-600">Memuat data tamu...</p>
+    <div class="w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 p-2">
+      <div class="bg-white p-4 rounded-lg shadow-md text-center flex flex-col items-center h-full">
+        <div class="bg-gray-200 w-full pt-[100%]"></div> <p class="mt-3 font-semibold text-lg text-gray-800">Memuat...</p>
+      </div>
+    </div>
+    <div class="w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 p-2">
+      <div class="bg-white p-4 rounded-lg shadow-md text-center flex flex-col items-center h-full">
+        <div class="bg-gray-200 w-full pt-[100%]"></div> <p class="mt-3 font-semibold text-lg text-gray-800">Memuat...</p>
+      </div>
     </div>
   </div>
 
@@ -43,223 +41,154 @@
     Partner with <a href="https://siskahandiska.com/" class="text-blue-600 font-semibold" target="_blank">Siska Handiska Creative</a>
   </footer>
 
-<script>
-    // Konfigurasi dan Variabel Global
+  <script>
+    // Menargetkan elemen-elemen penting
     const container = document.getElementById("qr-container");
     const downloadAllBtn = document.getElementById("download-all-btn");
-    const paginationControls = document.getElementById("pagination-controls");
     
+    // Ganti URL bingkai dan Firebase sesuai kebutuhan Anda
     const frameImageUrl = 'https://lh3.googleusercontent.com/d/1r5wTsriU03fe-2BYl4_bC5Wbe68Roulh=w1000'; 
     const firebaseDataUrl = "https://harikebaya-2025-default-rtdb.firebaseio.com/guests.json";
 
-    let allGuests = []; // Menyimpan semua data tamu dari Firebase
-    const generatedQRCodes = []; // Menyimpan canvas full-res untuk di-zip
-    
-    let currentPage = 1;
-    const itemsPerPage = 10;
+    // Array untuk menyimpan data canvas dan nama tamu yang sudah jadi
+    const generatedQRCodes = [];
 
-    // Memuat gambar bingkai
     const frameImage = new Image();
     frameImage.src = frameImageUrl;
     frameImage.crossOrigin = "Anonymous";
 
     frameImage.onload = function() {
-      fetchAndProcessGuests();
+      container.innerHTML = ''; // Kosongkan kontainer dari placeholder
+
+      const framePadding = 250; 
+
+      fetch(firebaseDataUrl)
+        .then(res => res.json())
+        .then(data => {
+          if (!data) {
+             container.innerHTML = '<p class="text-gray-500 text-center w-full">Tidak ada data tamu yang ditemukan.</p>';
+             downloadAllBtn.textContent = "Tidak ada data";
+             return;
+          }
+
+          const guestEntries = Object.entries(data);
+          const totalGuests = guestEntries.length;
+          let processedGuests = 0;
+
+          if (totalGuests === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-center w-full">Tidak ada data tamu yang ditemukan.</p>';
+            downloadAllBtn.textContent = "Tidak ada data";
+            return;
+          }
+
+          guestEntries.forEach(([id, guest]) => {
+            const wrapperDiv = document.createElement("div");
+            wrapperDiv.className = "w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 p-2";
+
+            const cardDiv = document.createElement("div");
+            cardDiv.className = "bg-white p-4 rounded-lg shadow-md text-center flex flex-col items-center h-full";
+            
+            const finalCanvas = document.createElement("canvas");
+            finalCanvas.width = frameImage.width;
+            finalCanvas.height = frameImage.height;
+            finalCanvas.className = "w-full h-auto";
+            const ctx = finalCanvas.getContext("2d");
+
+            const availableWidth = frameImage.width - (framePadding * 2);
+            const availableHeight = frameImage.height - (framePadding * 2);
+            const qrSize = Math.min(availableWidth, availableHeight);
+
+            const qrCanvas = document.createElement("canvas");
+            const qrOptions = { width: qrSize, errorCorrectionLevel: 'H', margin: 1 };
+            
+            QRCode.toCanvas(qrCanvas, guest.name, qrOptions, function (error) {
+              if (error) {
+                console.error(error);
+                // Tetap hitung agar proses tidak macet jika ada error
+                processedGuests++; 
+                return;
+              }
+
+              const qrX = (frameImage.width - qrSize) / 2;
+              const qrY = ((frameImage.height - qrSize) / 2) - 40;
+
+              ctx.drawImage(frameImage, 0, 0, finalCanvas.width, finalCanvas.height);
+              ctx.drawImage(qrCanvas, qrX, qrY);
+              
+              cardDiv.appendChild(finalCanvas);
+
+              const nameElement = document.createElement("p");
+              nameElement.className = "mt-3 font-semibold text-lg text-gray-800";
+              nameElement.textContent = guest.name;
+              cardDiv.appendChild(nameElement);
+
+              const downloadBtn = document.createElement("a");
+              downloadBtn.textContent = "⬇️ Download";
+              downloadBtn.className = "mt-2 inline-block bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-700";
+              downloadBtn.href = finalCanvas.toDataURL("image/png");
+              downloadBtn.download = `QR-${guest.name}.png`;
+              cardDiv.appendChild(downloadBtn);
+              
+              wrapperDiv.appendChild(cardDiv);
+              container.appendChild(wrapperDiv);
+
+              // Simpan hasil canvas dan nama untuk di-zip nanti
+              generatedQRCodes.push({ canvas: finalCanvas, name: guest.name });
+              
+              // Cek apakah semua QR code sudah diproses
+              processedGuests++;
+              if (processedGuests === totalGuests) {
+                downloadAllBtn.disabled = false;
+                downloadAllBtn.textContent = "⬇️ Download Semua (ZIP)";
+              }
+            });
+          });
+        });
     };
 
     frameImage.onerror = function() {
-      console.error("Gagal memuat gambar bingkai.");
-      container.innerHTML = '<p class="text-red-500 w-full text-center font-bold">Error: Gagal memuat gambar bingkai. Periksa URL gambar pada kode.</p>';
+      console.error("Gagal memuat gambar bingkai. Periksa kembali URL gambar Anda.");
+      container.innerHTML = '<p class="text-red-500 w-full text-center">Error: Gagal memuat gambar bingkai. Silakan periksa URL gambar pada kode.</p>';
       downloadAllBtn.textContent = "Error Bingkai";
     };
 
-    function fetchAndProcessGuests() {
-        fetch(firebaseDataUrl)
-            .then(res => res.json())
-            .then(data => {
-                if (!data || Object.keys(data).length === 0) {
-                    displayNoData();
-                    return;
-                }
-                allGuests = Object.entries(data).map(([id, guest]) => ({ id, ...guest }));
-                displayPage(currentPage);
-                prepareAllQRsForZip(); 
-            })
-            .catch(error => {
-                console.error("Error fetching data:", error);
-                container.innerHTML = '<p class="text-red-500 w-full text-center font-bold">Gagal mengambil data tamu dari database.</p>';
-                downloadAllBtn.textContent = "Error Data";
-            });
-    }
-
-    function displayPage(page) {
-        currentPage = page;
-        container.innerHTML = '';
-        const startIndex = (page - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        const paginatedGuests = allGuests.slice(startIndex, endIndex);
-        paginatedGuests.forEach(guest => generateAndDisplayCard(guest));
-        setupPagination();
-    }
-
-    function generateAndDisplayCard(guest) {
-        const finalCanvas = document.createElement('canvas');
-        finalCanvas.width = frameImage.width;
-        finalCanvas.height = frameImage.height;
-        const ctx = finalCanvas.getContext('2d');
-        const framePadding = 250;
-        const qrSize = Math.min(frameImage.width - (framePadding * 2), frameImage.height - (framePadding * 2));
-        const qrCanvas = document.createElement('canvas');
-        const qrOptions = { width: qrSize, errorCorrectionLevel: 'H', margin: 1 };
-
-        QRCode.toCanvas(qrCanvas, guest.name, qrOptions, function (error) {
-            if (error) { console.error(error); return; }
-
-            const qrX = (finalCanvas.width - qrSize) / 2;
-            const qrY = ((finalCanvas.height - qrSize) / 2) - 40;
-            ctx.drawImage(frameImage, 0, 0, finalCanvas.width, finalCanvas.height);
-            ctx.drawImage(qrCanvas, qrX, qrY);
-
-            const wrapperDiv = document.createElement("div");
-            wrapperDiv.className = "w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 p-2";
-            const cardDiv = document.createElement("div");
-            cardDiv.className = "bg-white p-4 rounded-lg shadow-md text-center flex flex-col items-center h-full";
-
-            const thumbnailImg = document.createElement('img');
-            thumbnailImg.src = finalCanvas.toDataURL('image/png');
-            thumbnailImg.className = 'w-full h-auto rounded-md';
-            cardDiv.appendChild(thumbnailImg);
-            
-            const nameElement = document.createElement("p");
-            nameElement.className = "mt-3 font-semibold text-lg text-gray-800";
-            nameElement.textContent = guest.name;
-            cardDiv.appendChild(nameElement);
-
-            const downloadBtn = document.createElement("a");
-            downloadBtn.textContent = "⬇️ Download";
-            downloadBtn.className = "mt-2 w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors";
-            downloadBtn.href = finalCanvas.toDataURL("image/png");
-            downloadBtn.download = `QR-${guest.name}.png`;
-            cardDiv.appendChild(downloadBtn);
-            
-            wrapperDiv.appendChild(cardDiv);
-            container.appendChild(wrapperDiv);
-        });
-    }
-
-    function prepareAllQRsForZip() {
-        let processedCount = 0;
-        const totalGuests = allGuests.length;
-        if (totalGuests === 0) return;
-
-        allGuests.forEach(guest => {
-            const finalCanvas = document.createElement('canvas');
-            finalCanvas.width = frameImage.width;
-            finalCanvas.height = frameImage.height;
-            const ctx = finalCanvas.getContext('2d');
-            const framePadding = 250;
-            const qrSize = Math.min(frameImage.width - (framePadding * 2), frameImage.height - (framePadding * 2));
-            const qrCanvas = document.createElement('canvas');
-            const qrOptions = { width: qrSize, errorCorrectionLevel: 'H', margin: 1 };
-
-            QRCode.toCanvas(qrCanvas, guest.name, qrOptions, function (error) {
-                if (!error) {
-                    const qrX = (finalCanvas.width - qrSize) / 2;
-                    const qrY = ((finalCanvas.height - qrSize) / 2) - 40;
-                    ctx.drawImage(frameImage, 0, 0, finalCanvas.width, finalCanvas.height);
-                    ctx.drawImage(qrCanvas, qrX, qrY);
-                    generatedQRCodes.push({ canvas: finalCanvas, name: guest.name });
-                }
-                
-                processedCount++;
-                if (processedCount === totalGuests) {
-                    downloadAllBtn.disabled = false;
-                    downloadAllBtn.textContent = "⬇️ Download Semua (ZIP)";
-                }
-            });
-        });
-    }
-    
-    // --- FUNGSI PAGINASI YANG DIPERBARUI ---
-    function setupPagination() {
-        paginationControls.innerHTML = '';
-        const totalPages = Math.ceil(allGuests.length / itemsPerPage);
-        if (totalPages <= 1) return;
-
-        // Kelas dasar untuk semua tombol paginasi agar konsisten
-        const btnBaseClass = 'flex items-center justify-center px-3 h-8 text-sm font-medium text-gray-600 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 transition-colors';
-
-        // Tombol "Previous"
-        const prevButton = document.createElement('button');
-        prevButton.innerHTML = `
-            <svg class="w-3.5 h-3.5 mr-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5H1m0 0l4 4M1 5l4-4"/></svg>
-            Prev
-        `;
-        prevButton.className = `${btnBaseClass} rounded-l-lg`;
-        prevButton.disabled = currentPage === 1;
-        if (prevButton.disabled) prevButton.classList.add('opacity-50', 'cursor-not-allowed');
-        prevButton.onclick = () => displayPage(currentPage - 1);
-        paginationControls.appendChild(prevButton);
-
-        // Tombol Angka Halaman
-        for (let i = 1; i <= totalPages; i++) {
-            const pageButton = document.createElement('button');
-            pageButton.textContent = i;
-            // Hapus rounded agar tombol angka menyatu
-            pageButton.className = `${btnBaseClass} -ml-px`; // -ml-px untuk menumpuk border
-            if (i === currentPage) {
-                pageButton.classList.add('pagination-btn-active');
-            }
-            pageButton.onclick = () => displayPage(i);
-            paginationControls.appendChild(pageButton);
-        }
-
-        // Tombol "Next"
-        const nextButton = document.createElement('button');
-        nextButton.innerHTML = `
-            Next
-            <svg class="w-3.5 h-3.5 ml-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/></svg>
-        `;
-        nextButton.className = `${btnBaseClass} rounded-r-lg -ml-px`;
-        nextButton.disabled = currentPage === totalPages;
-        if (nextButton.disabled) nextButton.classList.add('opacity-50', 'cursor-not-allowed');
-        nextButton.onclick = () => displayPage(currentPage + 1);
-        paginationControls.appendChild(nextButton);
-    }
-
-    function displayNoData() {
-        container.innerHTML = '<p class="text-gray-500 text-center w-full">Tidak ada data tamu yang ditemukan.</p>';
-        downloadAllBtn.textContent = "Tidak Ada Data";
-        downloadAllBtn.disabled = true;
-    }
-
+    // Event listener untuk tombol download semua
     downloadAllBtn.addEventListener('click', function() {
       this.disabled = true;
       this.textContent = 'Mengompres file... ⏳';
+
       const zip = new JSZip();
 
+      // Tambahkan setiap gambar ke dalam file zip
       generatedQRCodes.forEach(item => {
+        // Ambil data gambar dari canvas dalam format base64
         const imageData = item.canvas.toDataURL('image/png').split(',')[1];
+        // Tambahkan file ke zip
         zip.file(`QR-${item.name}.png`, imageData, { base64: true });
       });
 
+      // Generate file ZIP secara asynchronous
       zip.generateAsync({ type: "blob" })
         .then(function(content) {
+          // Buat URL sementara untuk blob ZIP
           const url = URL.createObjectURL(content);
+          // Buat elemen link tersembunyi untuk memicu unduhan
           const a = document.createElement('a');
           a.href = url;
           a.download = 'Semua-QR-Code.zip';
           document.body.appendChild(a);
-          a.click();
+          a.click(); // Klik link untuk memulai unduhan
           document.body.removeChild(a);
+          // Hapus URL sementara setelah selesai
           URL.revokeObjectURL(url);
         })
         .finally(() => {
+          // Kembalikan kondisi tombol seperti semula
           downloadAllBtn.disabled = false;
           downloadAllBtn.textContent = '⬇️ Download Semua (ZIP)';
         });
     });
-</script>
+  </script>
 
 </body>
 </html>
