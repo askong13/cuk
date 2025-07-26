@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF--8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guest Check-In - Hari Kebaya 2025</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,6 +20,13 @@
         .modal-content { transition: transform 0.3s ease; }
         .modal.visible { visibility: visible; opacity: 1; }
         .modal.visible .modal-content { transform: scale(1); }
+        /* Style for active filter button */
+        .filter-btn.active-filter {
+            background-color: #FFC236;
+            color: black;
+            border-color: #E0A82E;
+            z-index: 10;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -32,24 +39,48 @@
     </header>
 
     <main class="container mx-auto p-4 sm:p-6 lg:p-8">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 items-center">
-            <div class="relative">
-                <input type="text" id="search-input" placeholder="Cari nama tamu..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 shadow-sm">
-                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center">
+                <div class="relative">
+                    <input type="text" id="search-input" placeholder="Cari nama tamu..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 shadow-sm">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 lg:justify-end">
+                    <button id="addGuestBtn" class="w-full sm:w-auto bg-[#FFC236] hover:bg-[#E0A82E] text-black font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2 shadow-md">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        <span>Tambah Tamu</span>
+                    </button>
+                    <button id="resetAllBtn" class="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2 shadow-md">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M4 4l16 16"></path></svg>
+                        <span>Reset Check-in</span>
+                    </button>
                 </div>
             </div>
-            <div class="flex flex-col sm:flex-row gap-3 md:justify-end">
-                <button id="addGuestBtn" class="w-full sm:w-auto bg-[#FFC236] hover:bg-[#E0A82E] text-black font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2 shadow-md">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                    <span>Tambah Tamu</span>
-                </button>
-                <button id="resetAllBtn" class="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2 shadow-md">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M4 4l16 16"></path></svg>
-                    <span>Reset Check-in</span>
+
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 pt-4 border-t border-gray-200">
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-medium text-gray-600 hidden sm:inline">Filter:</span>
+                    <div id="filter-container" class="inline-flex rounded-md shadow-sm" role="group">
+                        <button type="button" data-filter="all" class="filter-btn px-4 py-2 text-sm font-medium border rounded-l-lg hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-yellow-500">
+                            Semua
+                        </button>
+                        <button type="button" data-filter="checkedIn" class="filter-btn px-4 py-2 text-sm font-medium border-t border-b hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-yellow-500">
+                            Sudah Check-in
+                        </button>
+                        <button type="button" data-filter="notCheckedIn" class="filter-btn px-4 py-2 text-sm font-medium border rounded-r-md hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-yellow-500">
+                            Belum Check-in
+                        </button>
+                    </div>
+                </div>
+                <button id="exportBtn" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2 shadow-md">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <span>Export ke Excel</span>
                 </button>
             </div>
         </div>
+
 
         <div id="loading-indicator" class="text-center py-10"><p class="text-gray-500 text-lg">Memuat daftar tamu...</p></div>
         <div id="guest-list-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
@@ -60,7 +91,7 @@
         <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-md p-6 transform scale-95">
             <div class="flex justify-between items-center mb-4">
                 <h2 id="modal-title" class="text-2xl font-bold"></h2>
-                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">&times;</button>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
             </div>
             <form id="guest-form" novalidate>
                 <div class="mb-5">
@@ -109,18 +140,53 @@
         const resetAllBtn = document.getElementById("resetAllBtn");
         const cancelBtn = document.getElementById("cancelBtn");
         const closeModalBtn = document.getElementById("closeModalBtn");
-        const deleteGuestBtn = document.getElementById("deleteGuestBtn"); // Tombol Hapus
+        const deleteGuestBtn = document.getElementById("deleteGuestBtn");
+        const filterContainer = document.getElementById("filter-container");
+        const exportBtn = document.getElementById("exportBtn");
 
         // --- State ---
         let globalGuestData = {};
         let editingGuestId = null;
+        let currentFilter = 'all'; // 'all', 'checkedIn', 'notCheckedIn'
 
-        // --- Functions ---
-        function renderGuests(guestsToRender) {
-            guestListContainer.innerHTML = '';
+        // --- Helper Functions ---
+        function getFilteredGuests() {
+            const searchTerm = searchInput.value.toLowerCase();
+            let guests = Object.entries(globalGuestData);
+
+            if (searchTerm) {
+                guests = guests.filter(([_, guest]) => (guest.name || '').toLowerCase().includes(searchTerm));
+            }
+
+            if (currentFilter === 'checkedIn') {
+                guests = guests.filter(([_, guest]) => guest.checkedIn);
+            } else if (currentFilter === 'notCheckedIn') {
+                guests = guests.filter(([_, guest]) => !guest.checkedIn);
+            }
+
+            return Object.fromEntries(guests);
+        }
+
+        function updateFilterButtons() {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active-filter', 'bg-white', 'text-gray-900');
+                 // Reset to default style first
+                btn.classList.add('bg-white', 'text-gray-900');
+
+                if (btn.dataset.filter === currentFilter) {
+                    btn.classList.add('active-filter');
+                }
+            });
+        }
+        
+        // --- Core Functions ---
+        function renderGuests() {
             loadingIndicator.style.display = 'none';
-
+            guestListContainer.innerHTML = '';
+            
+            const guestsToRender = getFilteredGuests();
             const guestEntries = Object.entries(guestsToRender);
+
             noResults.style.display = guestEntries.length === 0 ? 'block' : 'none';
 
             guestEntries.forEach(([id, guest]) => {
@@ -169,7 +235,8 @@
                 if (!res.ok) throw new Error("Gagal mengambil data dari server.");
                 const data = await res.json();
                 globalGuestData = data || {};
-                renderGuests(globalGuestData);
+                updateFilterButtons();
+                renderGuests();
                 updateStats();
             } catch (error) {
                 loadingIndicator.innerHTML = `<p class="text-red-500">${error.message}</p>`;
@@ -180,12 +247,10 @@
         // --- Modal Handling ---
         function openModal() {
             modal.classList.add('visible');
-            modal.querySelector('.modal-content').classList.add('visible');
         }
 
         function closeModal() {
             modal.classList.remove('visible');
-            modal.querySelector('.modal-content').classList.remove('visible');
             guestForm.reset();
             editingGuestId = null;
         }
@@ -196,14 +261,14 @@
             modalTitle.textContent = "Edit Detail Tamu";
             guestNameInput.value = guest.name || '';
             guestCheckedInInput.checked = guest.checkedIn || false;
-            deleteGuestBtn.style.display = 'block'; // Tampilkan tombol hapus
+            deleteGuestBtn.style.display = 'block';
             openModal();
         }
 
         function openAddModal() {
             editingGuestId = null;
             modalTitle.textContent = "Tambah Tamu Baru";
-            deleteGuestBtn.style.display = 'none'; // Sembunyikan tombol hapus
+            deleteGuestBtn.style.display = 'none';
             openModal();
         }
 
@@ -264,26 +329,57 @@
             }
         }
         
-        // --- NEW: Handle Delete Guest ---
         async function handleDeleteGuest() {
             if (!editingGuestId) return;
-
             const guestName = globalGuestData[editingGuestId].name || "Tamu ini";
-            if (!confirm(`Apakah Anda yakin ingin menghapus "${guestName}"? Aksi ini tidak dapat dibatalkan.`)) {
-                return;
-            }
+            if (!confirm(`Apakah Anda yakin ingin menghapus "${guestName}"? Aksi ini tidak dapat dibatalkan.`)) return;
 
             try {
                 const url = `${API_BASE_URL}/${editingGuestId}.json`;
                 const res = await fetch(url, { method: "DELETE" });
                 if (!res.ok) throw new Error("Gagal menghapus data tamu.");
-
                 alert('✅ Tamu berhasil dihapus.');
                 closeModal();
                 await loadGuests();
                 searchInput.value = '';
             } catch (error) {
                 alert(`Terjadi kesalahan: ${error.message}`);
+            }
+        }
+
+        async function exportToCSV() {
+            const guestsToExport = getFilteredGuests();
+            const guestEntries = Object.values(guestsToExport);
+            
+            if (guestEntries.length === 0) {
+                alert("Tidak ada data untuk diekspor pada filter ini.");
+                return;
+            }
+
+            const headers = ["Nama Tamu", "Status Check-In", "Waktu Check-in"];
+            const csvRows = [headers.join(',')];
+
+            guestEntries.sort((a, b) => a.name.localeCompare(b.name)).forEach(guest => {
+                const name = `"${(guest.name || '').replace(/"/g, '""')}"`;
+                const status = guest.checkedIn ? "Sudah Check-in" : "Belum Check-in";
+                const time = guest.checkinTime ? `"${new Date(guest.checkinTime).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}"` : "N/A";
+                csvRows.push([name, status, time].join(','));
+            });
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                const timestamp = new Date().toISOString().slice(0, 10);
+                link.setAttribute("href", url);
+                link.setAttribute("download", `Daftar_Tamu_Hari_Kebaya_2025_${timestamp}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
             }
         }
         
@@ -294,14 +390,18 @@
         cancelBtn.addEventListener("click", closeModal);
         closeModalBtn.addEventListener("click", closeModal);
         guestForm.addEventListener("submit", handleFormSubmit);
-        deleteGuestBtn.addEventListener("click", handleDeleteGuest); // Listener untuk tombol hapus
+        deleteGuestBtn.addEventListener("click", handleDeleteGuest);
+        exportBtn.addEventListener("click", exportToCSV);
 
-        searchInput.addEventListener("input", (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const filteredGuests = Object.fromEntries(
-                Object.entries(globalGuestData).filter(([id, guest]) => (guest.name || '').toLowerCase().includes(searchTerm))
-            );
-            renderGuests(filteredGuests);
+        searchInput.addEventListener("input", renderGuests);
+
+        filterContainer.addEventListener('click', (e) => {
+            const targetBtn = e.target.closest('.filter-btn');
+            if (!targetBtn || targetBtn.dataset.filter === currentFilter) return;
+            
+            currentFilter = targetBtn.dataset.filter;
+            updateFilterButtons();
+            renderGuests();
         });
 
         modal.addEventListener('click', (event) => {
