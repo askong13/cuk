@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Poppins', sans-serif; background-color: #f7fafc; }
         ::-webkit-scrollbar { width: 8px; }
@@ -347,7 +348,7 @@
             }
         }
 
-        async function exportToCSV() {
+        async function exportToExcel() {
             const guestsToExport = getFilteredGuests();
             const guestEntries = Object.values(guestsToExport);
             
@@ -356,31 +357,32 @@
                 return;
             }
 
-            const headers = ["Nama Tamu", "Status Check-In", "Waktu Check-in"];
-            const csvRows = [headers.join(',')];
+            // 1. Siapkan data dalam format array of objects
+            const dataForExcel = guestEntries
+                .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                .map(guest => ({
+                    "Nama Tamu": guest.name || '(Tanpa Nama)',
+                    "Status Check-In": guest.checkedIn ? "Sudah Check-in" : "Belum Check-in",
+                    "Waktu Check-in": guest.checkinTime ? new Date(guest.checkinTime).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' }) : "N/A"
+                }));
 
-            guestEntries.sort((a, b) => a.name.localeCompare(b.name)).forEach(guest => {
-                const name = `"${(guest.name || '').replace(/"/g, '""')}"`;
-                const status = guest.checkedIn ? "Sudah Check-in" : "Belum Check-in";
-                const time = guest.checkinTime ? `"${new Date(guest.checkinTime).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}"` : "N/A";
-                csvRows.push([name, status, time].join(','));
-            });
+            // 2. Buat worksheet dari data yang sudah disiapkan
+            const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
 
-            const csvContent = csvRows.join('\n');
-            const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            
-            if (link.download !== undefined) {
-                const url = URL.createObjectURL(blob);
-                const timestamp = new Date().toISOString().slice(0, 10);
-                link.setAttribute("href", url);
-                link.setAttribute("download", `Daftar_Tamu_Hari_Kebaya_2025_${timestamp}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            }
+            // (Opsional) Atur lebar kolom agar lebih rapi
+            worksheet['!cols'] = [
+                { wch: 35 }, // Lebar kolom "Nama Tamu"
+                { wch: 20 }, // Lebar kolom "Status Check-In"
+                { wch: 25 }  // Lebar kolom "Waktu Check-in"
+            ];
+
+            // 3. Buat workbook baru dan tambahkan worksheet ke dalamnya
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Daftar Tamu");
+
+            // 4. Generate file Excel dan trigger download
+            const timestamp = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(workbook, `Daftar_Tamu_Hari_Kebaya_2025_${timestamp}.xlsx`);
         }
         
         // --- Event Listeners ---
@@ -391,7 +393,7 @@
         closeModalBtn.addEventListener("click", closeModal);
         guestForm.addEventListener("submit", handleFormSubmit);
         deleteGuestBtn.addEventListener("click", handleDeleteGuest);
-        exportBtn.addEventListener("click", exportToCSV);
+        exportBtn.addEventListener("click", exportToExcel);
 
         searchInput.addEventListener("input", renderGuests);
 
